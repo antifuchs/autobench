@@ -88,7 +88,9 @@ possible build failure to *SBCL-DEVELOPERS*."
       (handler-case (progn (call-next-method impl dir)
                            (build-manual dir))
         (implementation-unbuildable (e)
-          (send-mail-to *sbcl-developers* (format nil "Can't build ~A" (unbuildable-implementation e)))))
+          (send-mail-to *sbcl-developers* (format nil "Can't build ~A" (unbuildable-implementation e))))
+        (program-exited-abnormally (e)
+          (send-mail-to *sbcl-developers* (format nil "Can't build manual for ~A: ~A" impl e))))
       (call-next-method impl dir)))
 
 ;;; arch-tag: "3c5332be-00b6-11d9-a66e-000c76244c24"

@@ -1,0 +1,10 @@
+* make CMUCL alone work (ploticus doesn't like displaying empty columns)
+
+* logarithmic scaling of the y axis
+
+* lots of experiments {-:
+
+* CLisp
+
+* <Xophe> antifuchs: another (more blue-sky TODO): an option to plot the x-axis by date rather than by version increment
+
