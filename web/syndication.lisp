@@ -49,7 +49,7 @@
                                           (select ((max release-date))
                                                   (where version
                                                          (<= release-date
-                                                             (- (to_universal_time "now") (* 86400 ,(1- day)))))))
+                                                             (- (to_universal_time "today") (* 86400 ,(1- day)))))))
                                        is-release
                                        (= ,impl i-name)))
                                (release-date) :desc))
@@ -62,14 +62,14 @@
       (iterate (for day from 1 to *go-back-days*)
                (for entry =
                     (iterate (for (v-name b-name stddev) in-relation
-                                  (translate
+                                   (translate
                                    `(select (v-name b-name (stddev seconds))
                                             (having
                                              (group-by (where result
                                                               (and
                                                                (between date
-                                                                        (- (to_universal_time "now") (* 86400 ,(1+ day)))
-                                                                        (- (to_universal_time "now") (* 86400 ,day)))
+                                                                        (- (to_universal_time "today") (* 86400 ,(1+ day)))
+                                                                        (- (to_universal_time "today") (* 86400 ,day)))
                                                                (not (in b-name ,*ignore-benchmarks*))
                                                                (= v_name ,implementation)
                                                                (= m_name ,host)))
@@ -81,15 +81,15 @@
                                    b-name v-name
                                    (pg-result
                                     (pg-exec *dbconn*
-                                             (translate
+                                              (translate
                                               `(select (v-version (avg seconds) release-date)
                                                        (order-by (group-by (where (join result version
                                                                                         :on (and (= v-name i-name) (= v-version version)))
                                                                                   (and
                                                                                    (between date
-                                                                                            (- (to_universal_time "now") (* 86400 ,(1+ day)))
-                                                                                            (- (to_universal_time "now") (* 86400 ,day)))
-                                                                                   (not (= b-name ,b-name))
+                                                                                            (- (to_universal_time "today") (* 86400 ,(1+ day)))
+                                                                                            (- (to_universal_time "today") (* 86400 ,day)))
+                                                                                   (= b-name ,b-name)
                                                                                    (= v_name ,v-name)
                                                                                    (= m_name ,host)))
                                                                            (v-version release-date))
