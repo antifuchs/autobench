@@ -8,7 +8,7 @@
 
 (defun explain-change (day benchmark impl from-revision to-revision from to)
   `(|li| ,(html-escape
-           (format nil "runtime for benchmark <a href=\"http://sbcl.boinkor.net/bench/?HOST=~A&IMPLEMENTATIONS=~A&ONLY-RELEASE=~A#~A\">~A</a> ~
+           (format nil "run time for benchmark <a href=\"http://sbcl.boinkor.net/bench/?HOST=~A&IMPLEMENTATIONS=~A&ONLY-RELEASE=~A#~A\">~A</a> ~
                        ~A from ~As to ~As between ~A revision ~A and ~A"
                    "walrus.boinkor.net" ; FIXME
                    impl (release-on-day impl day) benchmark
