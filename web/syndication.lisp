@@ -131,10 +131,11 @@
     ,@entries)))
 
 (defmethod handle-request-response ((handler atom-handler) method request)
-  (request-send-headers request
-                        :expires  (+ 1200 (get-universal-time)) ; TODO: set this to now+20 minutes (-:
-                        :last-modified *latest-result*
-                        :conditional t)
+  (let ((*latest-result* (first (pg-result (pg-exec *dbconn* "select max(date) from result") :tuple 0))))
+    (request-send-headers request
+                          :expires  (+ 1200 (get-universal-time)) ; TODO: set this to now+20 minutes (-:
+                          :last-modified *latest-result*
+                          :conditional t))
   (let ((s (request-stream request)))
     (format s "<?xml version=\"1.0\" encoding=\"utf-8\"?>")
     (param-bind ((implementation "SBCL" t)
