@@ -40,6 +40,15 @@
               (destructuring-bind (i-name i-version) (translate-version (list impl version))
                 (let* ((stat (sb-posix:stat file))
                        (mtime (sb-posix::stat-mtime stat)))
+                  ;; first, make sure the benchmark exists; we don't
+                  ;; do this below, because we insert all values in
+                  ;; one transaction. benchmarks should be inserted
+                  ;; regardless of psql errors.
+                  (dolist (b benchmark)
+                    (destructuring-bind (b-name r-secs u-secs &rest ignore) b
+                      (declare (ignore r-secs ignore u-secs))
+                      (ignore-pg-errors
+                       (pg-exec *dbconn* (format nil "insert into benchmark (name) values ('~A')" b-name)))))
                   (with-pg-transaction *dbconn*
                     (dolist (b benchmark)
                       (destructuring-bind (b-name r-secs u-secs &rest ignore) b

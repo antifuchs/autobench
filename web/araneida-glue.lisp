@@ -69,7 +69,7 @@
                (otherwise
                 (write-char c s))))))
 
-(defun emit-where-clause (&key benchmark implementations only-release host earliest latest)
+(defun emit-where-clause (&key benchmark implementations only-release host earliest latest &allow-other-keys)
   `(where
     (join (join (as result r)
                 (as version v)
@@ -80,7 +80,8 @@
           ,(if only-release
                `(and (>= v.release-date ,earliest)
                      (<= v.release-date ,latest))
-               'is-release)
+               `(or is-release
+                    (>= v.release-date ,latest)))
           (= m-name ,host)
           (in i.name ',implementations))))
 
@@ -90,9 +91,9 @@
                                         ,(if only-release only-release "all"))
                  :name (filesys-escape-name benchmark)))
 
-(defun generate-image-for (&rest conditions)
+(defun generate-image-for (&rest conditions &key unit &allow-other-keys)
   (let ((max-offset (first (pg-result (pg-exec *dbconn* (translate `(select ((max i.field_offset))
-                                                                           ,(apply #'emit-where-clause conditions))))
+                                                                             ,(apply #'emit-where-clause conditions))))
                                                :tuple 0)))
         (filename (merge-pathnames (apply #'file-name-for conditions) *prefab-base*)))
 
@@ -116,7 +117,7 @@
     (autobench::invoke-logged-program "gen-image" *ploticus-binary*
                                       `("-png" "-o" ,(namestring (make-pathname :type "png" :defaults filename)) "-prefab" "lines"
                                                ,(format nil "data=~A" (namestring filename)) "delim=tab" "x=1"
-                                               "ygrid=yes" "xlbl=version" "ylbl=seconds" "cats=yes" "-pagesize" "15,8" "autow=yes"
+                                               "ygrid=yes" "xlbl=version" ,(format nil "ylbl=~A" unit) "cats=yes" "-pagesize" "15,8" "autow=yes"
                                                "yrange=0"
                                                "ynearest=5" ; used to be 0.5. now ploticus doesn't scale according to the second column. TODO?
                                                "stubvert=yes"
@@ -143,7 +144,6 @@
      unix-time))
 
 (defun ensure-image-file-exists (&rest conditions)
-  (declare (special *latest-result*))
   (let ((filename (merge-pathnames (apply #'file-name-for conditions) *prefab-base*)))
     (unless (and (probe-file filename)
                  (probe-file (make-pathname :type "png" :defaults filename))
@@ -151,21 +151,33 @@
                      *latest-result*))
       (apply #'generate-image-for conditions))))
 
-
-
 (defun url-for-image (&rest conditions)
   (urlstring (merge-url *webserver-url*
                         (namestring
                          (make-pathname :type "png"
                                         :defaults (apply #'file-name-for conditions))))))
 
+(defun date-boundaries (&rest conditions &key host only-release &allow-other-keys)
+  (declare (ignore conditions))
+  (pg-result
+   (pg-exec *dbconn*
+            (translate `(select ((min release-date) (max release-date))
+                                (where (join version result
+                                             :on (and (= result.v-name version.i-name) (= v-version version)))
+                                       (and (= m-name ,host)
+                                            ,(if only-release
+                                                 `(like version (++ ,only-release ".%"))
+                                                 t))))))
+   :tuple 0))
+
 (defun emit-image-index (s &rest args &key host only-release implementations &allow-other-keys)
-  (let* ((benchmarks (pg-result (pg-exec *dbconn* "select distinct b_name from result order by b_name") :tuples))
-         (format-string "SELECT ~A(release_date) FROM VERSION AS V2 WHERE (V2.VERSION) LIKE ~A || '.%'")
-         (earliest (first (pg-result (pg-exec *dbconn* (format nil format-string "min" (sexql::quote-and-escape only-release))) :tuple 0)))
-         (latest (first (pg-result (pg-exec *dbconn* (format nil format-string "max" (sexql::quote-and-escape only-release))) :tuple 0))))
-    (iterate (for (benchmark) in benchmarks)
+  (let* ((benchmarks (pg-result (pg-exec *dbconn* "select distinct b_name, unit from result join benchmark on name=b_name order by b_name") :tuples))
+         (date-boundaries (apply #'date-boundaries args))
+         (earliest (first date-boundaries))
+         (latest (second date-boundaries)))
+    (iterate (for (benchmark unit) in benchmarks)
            (apply #'ensure-image-file-exists
+                  :unit unit
                   :benchmark benchmark
                   :earliest earliest
                   :latest latest
@@ -212,7 +224,7 @@
                                         (collect `(,version ,(format nil "~A (~A)" version steps))))))
            ((input :type :submit))))
          ((div :id "content")
-          ,@(iterate (for (benchmark) in benchmarks)
+          ,@(iterate (for (benchmark unit) in benchmarks)
                      (collect `(h1 ,benchmark))
                      (collect `((img :src ,(apply #'url-for-image
                                                   :benchmark benchmark
@@ -254,7 +266,7 @@
                           :conditional t) 
     (let ((s (request-stream request)))
       (format s "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\" \"http://www.w3.org/TR/html4/loose.dtd\">")
-      (param-bind ((implementations '("SBCL" "SBCL-character") t)
+      (param-bind ((implementations '("SBCL" "CMU Common Lisp") t)
                    (only-release nil) ; TODO: this mode should display the last CVS version's results.
                    (host "walrus.boinkor.net")) request
         (emit-image-index s
