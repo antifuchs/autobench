@@ -36,7 +36,6 @@ this should be >=3.")
 For improved compilation speed, I recommend using CMUCL 18e (-:")
 
 ;;; pathnames
-(defparameter *plot-base* (merge-pathnames #p"plot-data/" *base-dir*))
 (defparameter *cl-bench-base* (merge-pathnames #p"cl-bench/" *base-dir*))
 (defparameter *log-directory* (merge-pathnames #p"+log/" *base-dir*))
 (defparameter *version-cache-dir* (merge-pathnames #p"+build-archive/" *base-dir*))
