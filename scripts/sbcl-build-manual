@@ -11,6 +11,10 @@ UPLOADER_NAME=$1; shift
 SBCL_BINARY=$1; shift
 SBCL_CORE=$1;
 
+# ssh agent hack
+
+[ -f ~/.ssh-agent ] && . ~/.ssh-agent
+
 
 # first, find a usable GNU make. fortunately, sbcl provides a function
 # for that.
