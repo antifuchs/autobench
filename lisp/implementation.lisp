@@ -9,15 +9,15 @@
 ;;; The implementation protocol - methods that have to be overridden
 ;;; when a new implementation is added
 
+(defgeneric version-from-directory (implementation directory)
+  (:documentation "Returns the version of the implementation in DIRECTORY."))
+
 (defgeneric build-in-directory (implementation directory)
   (:documentation "Run the build for implementation
 IMPLEMENTATION in DIRECTORY.
 
 Signals a condition of type IMPLEMENTATION-UNBUILDABLE if the
-implementation can not be built.
-
-Returns a new imlementation instance with the slot VERSION set to
-the built implementation's version."))
+implementation can not be built."))
 
 (defgeneric run-benchmark (implementation))
 
@@ -54,6 +54,12 @@ the built implementation's version."))
 	 (loop for ,file in ,impl-files
 	       do (pack-file ,impl (implementation-cached-file-name ,impl ,file)))))))
 
+(defmacro with-current-directory (dir &body body)
+  `(unwind-protect (progn
+		     (sb-posix:chdir ,dir)
+		     ,@body)
+     (sb-posix:chdir *base-dir*)))
+
 (defun invoke-logged-program (step-name program args &key (environment (sb-ext:posix-environ)))
   (multiple-value-bind (second minute hour date month year day daylight-p zone) (get-decoded-time)
       (declare (ignore day daylight-p zone))
@@ -68,22 +74,26 @@ the built implementation's version."))
 			    :environment environment
 			    :output output-pathname))))
 
-(defmethod build-in-directory :around (impl dir)
-  "After a finished build, move the required files for the
-  version into the appropriate place in the build cache."
-  (sb-posix:chdir dir)
-  (unwind-protect (let ((impl (call-next-method impl dir)))
-		    (loop for file in (implementation-required-files impl)
-			  do (rename-file (merge-pathnames (implementation-file-in-builddir impl file) dir)
-					  (ensure-directories-exist
-					   (implementation-cached-file-name impl file))))
-		    impl)
-    (sb-posix:chdir *base-dir*)))
-
 (defun ensure-implementation-file-unpacked (impl file-name)
   (when (probe-file (implementation-cached-zip-file-name impl file-name))
     (unpack-file impl file-name))
   file-name)
+
+(defmethod build-in-directory :around (impl dir)
+  "After a finished build, move the required files for the
+  version into the appropriate place in the build cache."
+  (with-current-directory dir
+    (let ((impl (call-next-method impl dir)))
+      (loop for file in (implementation-required-files impl)
+	    do (rename-file (merge-pathnames (implementation-file-in-builddir impl file) dir)
+			    (ensure-directories-exist
+			     (implementation-cached-file-name impl file))))
+      impl)))
+
+(defmethod run-benchmark (impl)
+  (with-current-directory *cl-bench-base*
+    (call-next-method impl)))
+  
 
 ;;; our own helper functions. Not really for public use.
 

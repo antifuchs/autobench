@@ -2,13 +2,14 @@
 
 (defclass sbcl (implementation) ())
 
+(defmethod version-from-directory ((implementation sbcl) directory)
+  (declare (ignore impl))
+  (with-open-file (f #p"version.lisp-expr" :direction :input)
+    (read f)))
+
 (defmethod build-in-directory ((implementation sbcl) directory)
   (let* ((*default-pathname-defaults* directory)
-	 (*read-eval* nil)
-	 (version (with-open-file (f #p"version.lisp-expr" :direction :input)
-		    (read f))))
-    (setf implementation (make-instance (class-of implementation)
-			    :version version))
+	 (*read-eval* nil))
     (let ((process (invoke-logged-program "build-sbcl" #p"make.sh" *sbcl-build-args*)))
       (sb-ext:process-wait process)
       (unless (zerop (sb-ext:process-exit-code process))
@@ -17,18 +18,15 @@
     implementation))
 
 (defmethod run-benchmark ((impl sbcl))
-  (unwind-protect
-      (with-unzipped-implementation-files impl
-	(sb-posix:chdir *cl-bench-base*)
-	(invoke-logged-program "bench-sbcl" "/usr/bin/env" '("bash" "run-sbcl.sh")
-			       :environment `(,(format nil "SBCL=~A" (namestring (implementation-cached-file-name impl "sbcl")))
-					       ,(format nil "SBCL_OPT=--core ~A --userinit /dev/null --disable-debugger"
-							(namestring (implementation-cached-file-name impl "sbcl.core")))
-					       ,@(remove "SBCL_HOME" (sb-ext:posix-environ)
-							 :test #'string-equal
-							 :key (lambda (envl)
-								(subseq envl 0 (position #\= envl)))))))
-    (sb-posix:chdir *base-dir*)))
+  (with-unzipped-implementation-files impl
+    (invoke-logged-program "bench-sbcl" "/usr/bin/env" '("bash" "run-sbcl.sh")
+			   :environment `(,(format nil "SBCL=~A" (namestring (implementation-cached-file-name impl "sbcl")))
+					   ,(format nil "SBCL_OPT=--core ~A --userinit /dev/null --disable-debugger"
+						    (namestring (implementation-cached-file-name impl "sbcl.core")))
+					   ,@(remove "SBCL_HOME" (sb-ext:posix-environ)
+						     :test #'string-equal
+						     :key (lambda (envl)
+							    (subseq envl 0 (position #\= envl))))))))
 
 (defmethod implementation-required-files ((impl sbcl))
   (declare (ignore impl))
