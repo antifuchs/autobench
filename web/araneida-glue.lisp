@@ -272,7 +272,7 @@
                           :conditional t) 
     (let ((s (request-stream request)))
       (format s "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\" \"http://www.w3.org/TR/html4/loose.dtd\">")
-      (param-bind ((implementations '("SBCL" "CMU Common Lisp") t)
+      (param-bind ((implementations '("SBCL" "CMUCL") t)
                    (only-release nil) ; TODO: this mode should display the last CVS version's results.
                    (host "walrus.boinkor.net")) request
         (emit-image-index s
