@@ -1,6 +1,6 @@
 (in-package :autobench-web)
 
-(defparameter *bugfix-revision* 3)
+(defparameter *bugfix-revision* 4)
 
 (defparameter *go-back-days* 50)
 (defparameter *ignore-benchmarks* '(quote ("MAKE-LIST-SEQUENTIAL/RPLACD" "MAKE-LIST-SEQUENTIAL/PUSH-NREVERSE" "CRC40")))
