@@ -1,13 +1,5 @@
 (in-package :measure)
 
-(defun implementation-already-built-p (impl)
-  (with-unzipped-implementation-files impl
-    (null
-     (position nil
-               (mapcar (lambda (file)
-                         (probe-file (implementation-cached-file-name impl file)))
-                       (implementation-required-files impl))))))
-
 (defun map-over-versions-in-dir (function type directory)
   (iterate (with implementation = (make-instance type))
            (for dir initially (next-directory implementation directory) then (next-directory implementation dir))
@@ -25,11 +17,11 @@
         	     (dotimes (i *run-benchmark-n-times*)
 		       (run-benchmark impl))
                      (import-release-into-db impl (implementation-release-date impl dir))
-                     (read-benchmark-data *base-result-dir* (machine-instance))
-                     ;; TODO: move imported data away.
-                     )
+                     (read-benchmark-data *base-result-dir* (machine-instance)))
        (implementation-unbuildable ()
-	 (format t "can't build ~A" impl))))
+	 (format t "can't build ~A" impl))
+       (program-exited-abnormally (c)
+         (format t "Something else went wrong when autobuilding/benchmarking ~A: ~A" impl c))))
    type directory))
 
 
@@ -37,6 +29,7 @@
   (iterate (for version in versions)
            (for impl = (make-instance type :version version))
            (dotimes (i *run-benchmark-n-times*)
-	     (run-benchmark impl))))
+	     (run-benchmark impl))
+           (read-benchmark-data *base-result-dir* (machine-instance))))
 
 ;;; arch-tag: 1c76f71a-6a6c-4423-839f-46154ea259c2

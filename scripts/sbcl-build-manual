@@ -1,0 +1,29 @@
+#!/bin/sh -e
+
+## build an sbcl manual.
+
+## call with: sbcl-build-manual DIR DESTDIR UPLOADER_NAME
+# expects SSH_SSH_AUTH_SOCK and SSH_AGENT_PID to be set to reasonable
+# values, so auto-uploading works.
+
+DIR=$1; shift
+UPLOADER_NAME=$1
+
+
+# first, find a usable GNU make. fortunately, sbcl provides a function
+# for that.
+. "$DIR"/find-gnumake.sh
+find_gnumake
+
+cd "$DIR"/doc/manual
+"$GNUMAKE" clean || exit 1
+"$GNUMAKE" || exit 1
+rm -rf manual || true
+cp -Rp sbcl manual
+
+# make a tarball and unpack it in SBCL's web space
+
+tar zcf "$DESTDIR"/sbcl-manual.tgz manual
+cat "$DESTDIR"/sbcl-manual.tgz | ssh $UPLOADER_NAME@shell.sf.net cd /home/groups/s/sb/sbcl/htdocs ";" tar zxf -
+
+# arch-tag: "100855f9-ff31-11d8-8b1b-000c76244c24"

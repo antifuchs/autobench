@@ -74,11 +74,11 @@
   (clean-up-dir *plot-base*)
   (let ((files (make-hash-table :test #'equal))
 	(*latest-cvs-version*  (first
-				(pg-result (pg-exec *conn*
+				(pg-result (pg-exec *dbconn*
 						    "select version from version where release_date = (select max(release_date) from version);")
 					   :tuple 0))))
     (unwind-protect
-	(pg-for-each *conn* (format nil "~
+	(pg-for-each *dbconn* (format nil "~
                             select r1.b_name, r1.v_name, r1.v_version, avg(r1.seconds) as mean, ~
                                    stddev(r1.seconds) / sqrt(count(r1.seconds)) as stderr, ~
                                    i.field_offset, max(i2.field_offset) - i.field_offset as inv_offset, ~
@@ -103,7 +103,7 @@
 
 (defun bench-analysis.raw ()
   "not a bench analysis per se. just output the benchmark data as a raw SEXP."
-  (let ((tuples (pg-result (pg-exec *conn* (format nil "select b_name, v_name, v_version, avg(seconds) as mean, stddev(seconds) / sqrt(count(seconds)) as stderr ~
+  (let ((tuples (pg-result (pg-exec *dbconn* (format nil "select b_name, v_name, v_version, avg(seconds) as mean, stddev(seconds) / sqrt(count(seconds)) as stderr ~
                                                         from result join version on (v_name=i_name and v_version = version) ~
                                                         group by b_name, v_name, v_version, release_date ~
                                                         order by b_name, release_date;"))

@@ -10,7 +10,6 @@
     :components ((:file "package")
 		 (:file "variables" :depends-on ("package"))
 		 (:file "txt-sql" :depends-on ("variables"))
-		 (:file "report" :depends-on ("variables"))
 		 (:file "implementation" :depends-on ("variables"))
 		 (:file "sbcl" :depends-on ("variables" "implementation"))
 		 (:file "autobuilder" :depends-on ("implementation"))))

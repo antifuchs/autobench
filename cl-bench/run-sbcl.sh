@@ -2,7 +2,7 @@
 
 SBCL=${SBCL:-sbcl}
 
-gmake clean optimize-files
+make clean optimize-files
 $SBCL ${SBCL_OPT} <<EOF
  (progn 
    (load "sysdep/setup-sbcl.lisp") 

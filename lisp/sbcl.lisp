@@ -8,28 +8,31 @@
 
 (defmethod version-from-directory ((impl sbcl) directory)
   (declare (ignore impl))
-  (with-open-file (f #p"version.lisp-expr" :direction :input)
-    (read f)))
+  (let ((*read-eval* nil))
+    (with-open-file (f #p"version.lisp-expr" :direction :input)
+      (read f))))
 
 (defmethod build-in-directory ((implementation sbcl) directory)
-  (let* ((*default-pathname-defaults* directory)
-	 (*read-eval* nil))
-    (unless (zerop (invoke-logged-program "build-sbcl" #p"make.sh" *sbcl-build-args*))
-      (error 'implementation-unbuildable
-	     :implementation implementation))
+  (with-current-directory directory
+    (handler-case (invoke-logged-program "build-sbcl" #p"make.sh" *sbcl-build-args*)
+      (program-exited-abnormally ()
+        (error 'implementation-unbuildable
+               :implementation implementation)))
     implementation))
+
+(defun prepare-sbcl-environment ()
+  (remove "SBCL_HOME" (sb-ext:posix-environ)
+          :test #'string-equal
+          :key (lambda (envl) (subseq envl 0 (position #\= envl)))))
 
 (defmethod run-benchmark ((impl sbcl))
   (with-unzipped-implementation-files impl
     (invoke-logged-program "bench-sbcl" "/usr/bin/env" '("bash" "run-sbcl.sh")
 			   :environment `(,(format nil "SBCL=~A" (namestring (implementation-cached-file-name impl "sbcl")))
-					  ,(format nil "SBCL_OPT=--core ~A --userinit /dev/null --disable-debugger --boink-core-file ~a"
+					  ,(format nil "SBCL_OPT=--core ~A --userinit /dev/null --disable-debugger --boink-core-file ~A"
 						   (namestring (implementation-cached-file-name impl "sbcl.core"))
 						   (namestring (implementation-cached-file-name impl "sbcl.core")))
-					  ,@(remove "SBCL_HOME" (sb-ext:posix-environ)
-						    :test #'string-equal
-						    :key (lambda (envl)
-							   (subseq envl 0 (position #\= envl))))))))
+					  ,@(prepare-sbcl-environment)))))
 
 (defmethod implementation-required-files ((impl sbcl))
   (declare (ignore impl))
@@ -61,5 +64,31 @@
                                 (finding line such-that (and (= (mismatch line "Date: ") 6)
                                                              (not (null (find #\/ line))))))))
         (net.telent.date:parse-time date-line :start 6)))))
+
+;;; stuff for autobuilding on walrus. not for everybody, I think...
+
+(defun last-version-p (directory)
+  (with-input-from-program (missing *tla-binary* "missing" "--dir" (namestring directory))
+    (null (read-line missing nil nil))))
+
+(defun send-mail-to (address subject)
+  ;; TODO: send mail. No idea how to do that, yet
+  (format t "Would have sent mail to ~s with subject ~S~%" address subject))
+
+(defun build-manual (dir)
+  (invoke-logged-program "sbcl-build-manual" (namestring (merge-pathnames #p"scripts/sbcl-build-manual" *base-dir*))
+                         `(,(namestring dir) ,(namestring *www-base*) "antifuchs")
+                         :environment `(,@(prepare-sbcl-environment))))
+
+(defmethod build-in-directory :around ((impl sbcl) dir)
+  "If this is the last revision, build the manual and report a
+possible build failure to *SBCL-DEVELOPERS*."
+  (if (and (last-version-p dir)
+           (equalp "walrus.boinkor.net" (machine-instance))) ;; only makes sense on walrus
+      (handler-case (progn (call-next-method impl dir)
+                           (build-manual dir))
+        (implementation-unbuildable (e)
+          (send-mail-to *sbcl-developers* (format nil "Can't build ~A" (unbuildable-implementation e)))))
+      (call-next-method impl dir)))
 
 ;;; arch-tag: "3c5332be-00b6-11d9-a66e-000c76244c24"

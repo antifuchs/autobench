@@ -56,11 +56,14 @@
 				  
                         (pg-exec *dbconn* (format nil "insert into result values (~A::int4::abstime, '~A', '~A', '~A', '~A', ~f)"
                                                   mtime i-name i-version b-name machine-name u-secs))))))))
-          (cl:end-of-file () nil))))))
+          (cl:end-of-file () nil))))
+    (rename-file file (ensure-directories-exist
+                       (merge-pathnames (make-pathname :name (pathname-name file))
+                                        *archived-result-dir*)))))
 
 ;;; stand-alone stuff.
 #+(or)
- (dolist (machine-dir (remove-duplicates
+(dolist (machine-dir (remove-duplicates
 		      (mapcar (lambda (file)
 				(list (first (last (pathname-directory file)))
 				      (pathname-directory file)))

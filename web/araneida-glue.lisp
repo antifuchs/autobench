@@ -29,6 +29,7 @@
                  :port (araneida:url-port *base-url*)))
 
 (defclass index-handler (handler) ())
+(defclass choose-handler (handler) ())
 
 (defun last-version ()
   (second (pg-result (pg-exec *dbconn*
@@ -59,36 +60,40 @@
                (otherwise
                 (write-char c s))))))
 
-(defun emit-where-clause (&key benchmark implementations releases-only host)
-  `(and (= r.b-name ,benchmark)
-        ,(if releases-only
-             'is-release
-             t)
-        (= m-name ,host)
-        (in i.name ',implementations)
-        (> release-date "2004-06-01 0:00")))
+(defun emit-where-clause (&key benchmark implementations only-release host earliest latest)
+  `(where
+    (join (join (as result r)
+                (as version v)
+                :on (and (= r.v-name v.i-name) (= r.v-version v.version)))
+          (as impl i)
+          :on (= v.i-name i.name))
+    (and (= r.b-name ,benchmark)
+          ,(if only-release
+               `(and (>= v.release-date (|::| (|::| ,earliest int4) abstime))
+                     (<= v.release-date (|::| (|::| ,latest int4) abstime)))
+               'is-release)
+          (= m-name ,host)
+          (in i.name ',implementations))))
 
-(defun file-name-for (&key benchmark implementations releases-only host)
+(defun file-name-for (&key benchmark implementations only-release host &allow-other-keys)
   (make-pathname :directory `(:relative ,(filesys-escape-name (prin1-to-string implementations))
                                         ,host
-                                        ,(if releases-only "releases" "all"))
+                                        ,(if only-release only-release "all"))
                  :name (filesys-escape-name benchmark)))
 
-(defun generate-image-for (&rest conditions &key implementations &allow-other-keys)
-  (let ((max-offset (first (pg-result (pg-exec *dbconn* "select max(field_offset) from impl") :tuple 0)))
+(defun generate-image-for (&rest conditions)
+  (let ((max-offset (first (pg-result (pg-exec *dbconn* (translate `(select ((max i.field_offset))
+                                                                           ,(apply #'emit-where-clause conditions))))
+                                               :tuple 0)))
         (filename (merge-pathnames (apply #'file-name-for conditions) *prefab-base*)))
+
     (with-open-file (f (ensure-directories-exist filename) :direction :output
                        :if-exists :supersede :if-does-not-exist :create)
       (iterate (for (date name version offset mean stderr) in-relation
                     (translate `(select (v.release-date v.i-name v.version i.field-offset
                                                         (avg r.seconds) (/ (stddev r.seconds) (sqrt (count r.seconds))))
                                         (order-by
-                                         (group-by (where (join (join (as result r)
-                                                                      (as version v)
-                                                                      :on (and (= r.v-name v.i-name) (= r.v-version v.version)))
-                                                                (as impl i)
-                                                                :on (= v.i-name i.name))
-                                                          ,(apply #'emit-where-clause conditions))
+                                         (group-by ,(apply #'emit-where-clause conditions)
                                                    (v.release-date v.i-name v.version i.field-offset))
                                          (v.release-date))))
                     on-connection *dbconn*)
@@ -103,20 +108,25 @@
                                     `("-png" "-o" ,(namestring (make-pathname :type "png" :defaults filename)) "-prefab" "lines"
                                              ,(format nil "data=~A" (namestring filename)) "delim=tab" "x=1"
                                              "ygrid=yes" "xlbl=version" "ylbl=seconds" "cats=yes" "-pagesize" "15,8" "autow=yes"
-                                             "yrange=0" "ynearest=0.5" "stubvert=yes"
-                                             ,@(print
-                                                (iterate (for (impl) in-relation
-                                                              (translate `(select (name)
-                                                                                  (order-by (where impl
-                                                                                                   (in name ',implementations))
-                                                                                            (field-offset))))
-                                                              on-connection *dbconn*)
-                                                         (for impl-n from 1 to 4)
-                                                         (for pl-s = (if (= impl-n 1) "" impl-n))
-                                                         ;; "name=SBCL" "y=2" "err=3" "name2=CMU Common Lisp" "y2=4" "err2=5"
-                                                         (collect (format nil "name~A=~A" pl-s impl))
-                                                         (collect (format nil "y~A=~A" pl-s (* impl-n 2)))
-                                                         (collect (format nil "err~A=~A" pl-s (1+ (* impl-n 2))))))))))
+                                             "yrange=0"
+                                             "ynearest=5" ; used to be 0.5. now ploticus doesn't scale according to the second column. TODO?
+                                             "stubvert=yes"
+                                             ,@(iterate (for (impl offset) in-relation
+                                                             (translate `(select (name field-offset)
+                                                                                 (order-by (alias
+                                                                                            (distinct
+                                                                                             (select (i.name field-offset)
+                                                                                                     (order-by
+                                                                                                      ,(apply #'emit-where-clause conditions)
+                                                                                                      (i.name))))
+                                                                                            raw)
+                                                                                           (field-offset))))
+                                                             on-connection *dbconn*)
+                                                        (for pl-s = (if (= offset 0) "" (1+ (/ offset 2))))
+                                                        ;; "name=SBCL" "y=2" "err=3" "name2=CMU Common Lisp" "y2=4" "err2=5"
+                                                        (collect (format nil "name~A=~A" pl-s impl))
+                                                        (collect (format nil "y~A=~A" pl-s (+ 2 offset)))
+                                                        (collect (format nil "err~A=~A" pl-s (+ 3 offset))))))))
 
 (defun unix-time-to-universal-time (unix-time)
   (+ 2208988800 ; difference in seconds 1970-01-01 0:00 and 1900-01-01 0:00
@@ -147,50 +157,86 @@
                            (make-pathname :type "png"
                                           :defaults (apply #'file-name-for conditions))))))
 
-(defun emit-image-index (s &rest args)
-  (let ((benchmarks (pg-result (pg-exec *dbconn* "select distinct b_name from result order by b_name") :tuples)))
-    (apply #'ensure-image-files-exist benchmarks args)
+(defun emit-image-index (s &rest args &key only-release implementations &allow-other-keys)
+  (let* ((benchmarks (pg-result (pg-exec *dbconn* "select distinct b_name from result order by b_name") :tuples))
+         (format-string "SELECT ~A(release_date)::abstime::int4 FROM VERSION AS V2 WHERE (V2.VERSION) LIKE '~A' || '.%'")
+         (earliest (first (pg-result (pg-exec *dbconn* (format nil format-string "min" only-release)) :tuple 0)))
+         (latest (first (pg-result (pg-exec *dbconn* (format nil format-string "max" only-release)) :tuple 0))))
+    (apply #'ensure-image-files-exist benchmarks :earliest earliest :latest latest args)
     (html-stream s
       `(html
 	(head (title "SBCL Benchmarks"))
 	(body
-         (ul
+         ((div :id "sidebar")
+          ((form :method :post :action ,(urlstring *index-url*))
+           ,(make-multi-select :implementations implementations
+                               (iterate (for (impl) in-relation
+                                             (translate `(select (name) impl))
+                                             on-connection *dbconn*)
+                                        (collect `(,impl ,impl))))
+           ,(make-select :only-release only-release
+                         (cons '(NIL "None")
+                         (iterate (for (version steps) in-relation
+                                       (let ((subsel `(select ((count *))
+                                                              (where (as version v2)
+                                                                     (like v2.version (|\|\|| v.version ".%"))))))
+                                         (translate `(select (version ,subsel)
+                                                             (where (as version v)
+                                                                    (> ,subsel 0))))) 
+                                       on-connection *dbconn*)
+                                  (collect `(,version ,(format nil "~A (~A)" version steps))))))
+           ((input :type :submit))))
+         ((div :id benchmarks)
           ,@(iterate (for (benchmark) in benchmarks)
                      (collect `(h1 ,benchmark))
-                     (collect `((img :src ,(apply #'url-for-image :benchmark benchmark args)))))))))))
-
-(defmethod handle-request-response ((handler index-handler) method request)
-  (request-send-headers request :expires 0)
-  (let ((s (request-stream request)))
-    (emit-image-index s
-                      :implementations '("SBCL" "CMU Common Lisp" "SBCL-character")
-                      :releases-only nil
-                      :host "walrus.boinkor.net")))
-
-(defun make-select (name default &rest options)
-  `((select :name ,name)
-    ,@(loop for op in options
-	    if (equal default op)
-	      collect `((option :value ,op :selected "") ,op)
-	    else
-	      collect `((option :value ,op) ,op))))
+                     (collect `((img :src ,(apply #'url-for-image
+                                                  :benchmark benchmark
+                                                  :earliest earliest
+                                                  :latest latest
+                                                  args)))))))))))
 
 (defun enteredp (param)
   (and param (not (equal "" param))))
 
+(defmacro body-param-bind ((&rest args) request &body body)
+  `(let (,@(loop for (arg default-value is-list) in args
+                 collect `(,arg ,(if is-list
+                                     `(mapcar #'cadr (body-params ,(symbol-name arg) (request-body ,request)))
+                                     `(body-param ,(symbol-name arg) (request-body ,request))))))
+     ,@(loop for (arg default) in args
+             collect `(unless (enteredp ,arg)
+                        (setf ,arg ,default)))
+     ,@body))
+
+(defmethod handle-request-response ((handler index-handler) method request)
+  (request-send-headers request :expires 0)
+  (let ((s (request-stream request)))
+    (body-param-bind ((implementations '("SBCL" "SBCL-character") t)
+                      (only-release "0.8.13.77.character")
+                      (host "beaver")) request
+        (emit-image-index s
+                          :implementations implementations
+                          :only-release only-release
+                          :host host))))
+
+(defun make-select (name default options)
+  `((select :name ,name)
+    ,@(loop for (op text) in options
+	    if (equal default op)
+	      collect `((option :value ,op :selected "") ,text)
+	    else
+	      collect `((option :value ,op) ,text))))
+
+(defun make-multi-select (name selected options)
+  `((select :name ,name :multiple t :size 3)
+    ,@(loop for (op text) in options
+	    if (member op selected :test #'string=)
+	      collect `((option :value ,op :selected "") ,text)
+	    else
+	      collect `((option :value ,op) ,text))))
+
 (define-condition form-value-not-entered (error)
   ((name :accessor form-value-not-entered-name :initarg :name)))
-
-(defmacro body-param-bind ((&rest args) request &body body)
-  `(let (,@(loop for arg in args
-	       collect `(,arg (body-param ,(symbol-name arg) (request-body ,request)))))
-     (handler-case (progn ,@(loop for arg in args
-				  collect `(unless (enteredp ,arg)
-					     (error 'form-value-not-entered :name ',arg)))
-			  (progn ,@body))
-       (form-value-not-entered (e)
-	 (new-ticket-form ,@args
-			  (format nil "Please enter a valid ~A" (string-downcase (form-value-not-entered-name e))))))))
 
 (install-handler (http-listener-handler *bench-listener*)
 		 (make-instance 'index-handler)
