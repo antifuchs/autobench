@@ -1,6 +1,17 @@
 (in-package :autobench-web)
 
 (defparameter *site-name* "beaver.boinkor.net")
+(defparameter *dbconn* (pg-connect "asf" "asf" :host nil))
+
+(defparameter *prefab-base* #p"/home/asf/hack/sb-bench/+prefab/")
+(defparameter *ploticus-binary* "/usr/bin/ploticus")
+
+
+
+
+
+
+
 (defparameter *localhost-name* "localhost")
 (defparameter *external-port* 80)
 
@@ -16,11 +27,6 @@
                                          "/prefab/"))
 
 (defparameter *index-url* (merge-url *base-url* "index/"))
-
-(defparameter *dbconn* (pg-connect "asf" "asf" :host nil))
-
-(defparameter *prefab-base* #p"/home/asf/hack/sb-bench/+prefab/")
-(defparameter *ploticus-binary* "/usr/bin/ploticus")
 
 (defvar *bench-listener*)
 (let ((fwd-url (copy-url *base-url*)))
