@@ -135,7 +135,8 @@
     (request-send-headers request
                           :expires  (+ 1200 (get-universal-time)) ; TODO: set this to now+20 minutes (-:
                           :last-modified *latest-result*
-                          :conditional t))
+                          :conditional t
+                          :content-type "text/xml; charset=utf-8"))
   (let ((s (request-stream request)))
     (format s "<?xml version=\"1.0\" encoding=\"utf-8\"?>")
     (param-bind ((implementation "SBCL" t)
