@@ -140,9 +140,9 @@
     (format s "<?xml version=\"1.0\" encoding=\"utf-8\"?>")
     (param-bind ((implementation "SBCL" t)
                  (host "walrus.boinkor.net")) request
-      (emit-significant-changes s
-                                :implementation implementation
-                                :host host))))
+      (html-stream s
+                   (emit-significant-changes :implementation implementation
+                                             :host host)))))
 
 (install-handler (http-listener-handler *bench-listener*)
 		 (make-instance 'atom-handler)
