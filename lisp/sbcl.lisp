@@ -9,12 +9,26 @@
 		    (read f))))
     (setf implementation (make-instance (class-of implementation)
 			    :version version))
-    ;; TODO: implementation building code goes here.
+    (let ((process (invoke-logged-program "build-sbcl" #p"make.sh" *sbcl-build-args*)))
+      (sb-ext:process-wait process)
+      (unless (zerop (sb-ext:process-exit-code process))
+	(error 'implementation-unbuildable
+	       :implementation implementation)))
     implementation))
 
-(defmethod run-benchmark ((implementation sbcl))
-  ;; TODO: obviously, all functionality is missing.
-  )
+(defmethod run-benchmark ((impl sbcl))
+  (unwind-protect
+      (with-unzipped-implementation-files impl
+	(sb-posix:chdir *cl-bench-base*)
+	(invoke-logged-program "bench-sbcl" "/usr/bin/env" '("bash" "run-sbcl.sh")
+			       :environment `(,(format nil "SBCL=~A" (namestring (implementation-cached-file-name impl "sbcl")))
+					       ,(format nil "SBCL_OPT=--core ~A --userinit /dev/null --disable-debugger"
+							(namestring (implementation-cached-file-name impl "sbcl.core")))
+					       ,@(remove "SBCL_HOME" (sb-ext:posix-environ)
+							 :test #'string-equal
+							 :key (lambda (envl)
+								(subseq envl 0 (position #\= envl)))))))
+    (sb-posix:chdir *base-dir*)))
 
 (defmethod implementation-required-files ((impl sbcl))
   (declare (ignore impl))

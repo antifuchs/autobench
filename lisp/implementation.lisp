@@ -40,11 +40,12 @@ the built implementation's version."))
 (defun implementation-cached-file-name (impl file-name)
   (make-pathname :directory (append (pathname-directory *version-cache-dir*)
 				    (list (impl-name impl) (impl-version impl)))
-		 :name (pathname-name file-name)))
+		 :name (pathname-name file-name)
+		 :type (pathname-type file-name)))
 
 (defmacro with-unzipped-implementation-files (implementation &body body)
   (with-gensyms (impl-files impl file)
-    `(let* ((,impl implementation)
+    `(let* ((,impl ,implementation)
 	    (,impl-files (implementation-required-files ,impl)))
        (unwind-protect (progn
 			 (loop for ,file in ,impl-files
@@ -53,14 +54,31 @@ the built implementation's version."))
 	 (loop for ,file in ,impl-files
 	       do (pack-file ,impl (implementation-cached-file-name ,impl ,file)))))))
 
+(defun invoke-logged-program (step-name program args &key (environment (sb-ext:posix-environ)))
+  (multiple-value-bind (second minute hour date month year day daylight-p zone) (get-decoded-time)
+      (declare (ignore day daylight-p zone))
+      (let ((output-pathname (merge-pathnames
+			      (make-pathname
+			       :name (format nil "~A_~4,1,0,'0@A-~2,1,0,'0@A-~2,1,0,'0@AT~2,1,0,'0@A:~2,1,0,'0@A:~2,1,0,'0@A"
+					     step-name year month date hour minute second))
+			      *log-directory*)))
+	(ensure-directories-exist output-pathname)
+	(sb-ext:run-program program args
+			    :input nil
+			    :environment environment
+			    :output output-pathname))))
+
 (defmethod build-in-directory :around (impl dir)
   "After a finished build, move the required files for the
   version into the appropriate place in the build cache."
-  (call-next-method impl dir)
-  (loop for file in (implementation-required-files impl)
-	do (rename-file (merge-pathnames (implementation-file-in-builddir impl file) dir)
-			(ensure-directories-exist
-			 (implementation-cached-file-name impl file)))))
+  (sb-posix:chdir dir)
+  (unwind-protect (let ((impl (call-next-method impl dir)))
+		    (loop for file in (implementation-required-files impl)
+			  do (rename-file (merge-pathnames (implementation-file-in-builddir impl file) dir)
+					  (ensure-directories-exist
+					   (implementation-cached-file-name impl file))))
+		    impl)
+    (sb-posix:chdir *base-dir*)))
 
 (defun ensure-implementation-file-unpacked (impl file-name)
   (when (probe-file (implementation-cached-zip-file-name impl file-name))
@@ -77,10 +95,12 @@ the built implementation's version."))
 		   :type "gz")))
 
 (defun unpack-file (impl file-name)
+  (declare (ignorable impl file-name))
   ;; TODO: gunzip code
   nil)
 
 (defun pack-file (impl file-name)
+  (declare (ignorable impl file-name))
   ;; TODO: gzip code
   nil)
 
