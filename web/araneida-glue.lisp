@@ -225,7 +225,7 @@
          ((div :id "content")
           ,@(iterate (for (benchmark unit) in benchmarks)
                      (collect `(h1 ,benchmark))
-                     (collect `(a :name ,benchmark))
+                     (collect `((a :name ,benchmark)))
                      (collect `((img :src ,(apply #'url-for-image
                                                   :benchmark benchmark
                                                   :earliest earliest
