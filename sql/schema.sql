@@ -1,167 +1,216 @@
-create database sbclarch;
+--
+-- PostgreSQL database dump
+--
 
-drop table result;
-drop table benchmark;
-drop table version;
-drop table impl;
-drop table machine;
+\connect - "sbcl-arch"
+
+SET search_path = public, pg_catalog;
+
+--
+-- TOC entry 15 (OID 513163)
+-- Name: from_universal_time (integer); Type: FUNCTION; Schema: public; Owner: sbcl-arch
+--
+
+CREATE FUNCTION from_universal_time (integer) RETURNS timestamp with time zone
+    AS 'select timestamp with time zone ''1970-01-01 GMT'' + cast( ($1-2208988800)||'''' as interval);'
+    LANGUAGE sql;
 
 
-create table benchmark (
-       name varchar(90),
-       primary key (name)
+--
+-- TOC entry 16 (OID 513164)
+-- Name: from_universal_time (bigint); Type: FUNCTION; Schema: public; Owner: sbcl-arch
+--
+
+CREATE FUNCTION from_universal_time (bigint) RETURNS timestamp with time zone
+    AS 'select timestamp with time zone ''1970-01-01 GMT'' 
+  + cast( ($1-2208988800)||'''' as interval);'
+    LANGUAGE sql;
+
+
+--
+-- TOC entry 17 (OID 513165)
+-- Name: from_universal_time (numeric); Type: FUNCTION; Schema: public; Owner: sbcl-arch
+--
+
+CREATE FUNCTION from_universal_time (numeric) RETURNS timestamp with time zone
+    AS 'select timestamp with time zone ''1970-01-01 GMT'' + cast( ($1-2208988800)||'''' as interval);'
+    LANGUAGE sql;
+
+
+--
+-- TOC entry 18 (OID 513166)
+-- Name: to_universal_time (timestamp with time zone); Type: FUNCTION; Schema: public; Owner: sbcl-arch
+--
+
+CREATE FUNCTION to_universal_time (timestamp with time zone) RETURNS bigint
+    AS 'select cast(extract(epoch from $1) as bigint)+2208988800 ;'
+    LANGUAGE sql;
+
+
+--
+-- TOC entry 2 (OID 513207)
+-- Name: machine; Type: TABLE; Schema: public; Owner: sbcl-arch
+--
+
+CREATE TABLE machine (
+    name character varying(90) NOT NULL,
+    "type" character varying(10)
 );
 
-create table machine (
-       name varchar(90),
-       type varchar(10),
-       primary key (name)
+
+--
+-- TOC entry 3 (OID 513209)
+-- Name: impl; Type: TABLE; Schema: public; Owner: sbcl-arch
+--
+
+CREATE TABLE impl (
+    name character varying(90) NOT NULL,
+    field_offset integer
 );
 
-create table impl (
-       name varchar(90),
-       field_offset integer,
-       primary key (name)
+
+--
+-- TOC entry 4 (OID 513211)
+-- Name: version; Type: TABLE; Schema: public; Owner: sbcl-arch
+--
+
+CREATE TABLE "version" (
+    i_name character varying(90) NOT NULL,
+    "version" character varying(90) NOT NULL,
+    is_release boolean,
+    release_date bigint
 );
 
-create table version (
-       i_name varchar(90),
-       version varchar(90),
-       release_date timestamp,
-       primary key (i_name, version),
-       foreign key (i_name) references impl (name)
+
+--
+-- TOC entry 5 (OID 513213)
+-- Name: result; Type: TABLE; Schema: public; Owner: sbcl-arch
+--
+
+CREATE TABLE result (
+    v_name character varying(90) NOT NULL,
+    v_version character varying(90) NOT NULL,
+    b_name character varying(90) NOT NULL,
+    m_name character varying(90) NOT NULL,
+    seconds double precision,
+    date bigint
 );
 
-create table result (
-       date timestamp,
-       v_name varchar(90),
-       v_version varchar(90),
-       b_name varchar(90),
-       m_name varchar(90),
 
-       seconds double precision,
-       
-       primary key (date, v_name, v_version, b_name, m_name),
-       constraint result_x_machine foreign key (m_name) references machine (name),
-       constraint result_x_benchmark foreign key (b_name) references benchmark (name),
-       constraint result_x_impl foreign key (v_name,v_version) references version (i_name,version)
+--
+-- TOC entry 6 (OID 1689983)
+-- Name: benchmark; Type: TABLE; Schema: public; Owner: sbcl-arch
+--
+
+CREATE TABLE benchmark (
+    name character varying(90) NOT NULL,
+    unit character varying(90) DEFAULT 'seconds' NOT NULL
 );
 
-insert into machine values ('walrus.boinkor.net', 'x86');
 
-insert into impl values ('SBCL', 0);
-insert into impl values ('CMU Common Lisp', 2);
+--
+-- TOC entry 12 (OID 1691285)
+-- Name: result_benchmark_idx; Type: INDEX; Schema: public; Owner: sbcl-arch
+--
 
-
-begin transaction;
-insert into version values ('CMU Common Lisp', '18c', '2000-12-01 16:48:53');
-insert into version values ('CMU Common Lisp', '18d', '2002-04-10 14:57:15');
-insert into version values ('CMU Common Lisp', '18e', '2003-04-03 20:27:32');
-insert into version values ('CMU Common Lisp', 'pre-18f', '2003-11-01 12:47:23');
-insert into version values ('SBCL', '0.7.0', '2002-01-20 04:55');
-insert into version values ('SBCL', '0.7.1', '2002-01-27 04:15');
-insert into version values ('SBCL', '0.7.2', '2002-03-24 01:00');
-insert into version values ('SBCL', '0.7.3', '2002-04-25 02:00');
-insert into version values ('SBCL', '0.7.4', '2002-05-24 02:00');
-insert into version values ('SBCL', '0.8.0', '2003-05-25 02:00');
-insert into version values ('SBCL', '0.8.1', '2003-06-24 02:00');
-insert into version values ('SBCL', '0.8.2', '2003-07-26 02:00');
-insert into version values ('SBCL', '0.8.3', '2003-08-25 02:00');
-insert into version values ('SBCL', '0.8.4', '2003-10-03 02:00');
-insert into version values ('SBCL', '0.8.5', '2003-10-25 02:00');
-insert into version values ('SBCL', '0.8.6', '2003-11-25 01:00');
-insert into version values ('SBCL', '0.8.7', '2003-12-29 01:00');
-insert into version values ('SBCL', '0.8.8', '2004/02/24 22:52:25');
-insert into version values ('SBCL', '0.8.8.1', '2004/02/25 17:41:42');
-insert into version values ('SBCL', '0.8.8.3', '2004/02/26 08:36:22');
-insert into version values ('SBCL', '0.8.8.4', '2004/02/26 12:15:01');
-insert into version values ('SBCL', '0.8.8.5', '2004/02/27 09:41:37');
-insert into version values ('SBCL', '0.8.8.6', '2004/03/01 15:08:21');
-insert into version values ('SBCL', '0.8.8.7', '2004/03/01 16:21:14');
-insert into version values ('SBCL', '0.8.8.8', '2004/03/01 20:23:30');
-insert into version values ('SBCL', '0.8.8.9', '2004/03/01 20:30:23');
-insert into version values ('SBCL', '0.8.8.10', '2004/03/01 21:32:42');
-insert into version values ('SBCL', '0.8.8.11', '2004/03/01 23:22:25');
-insert into version values ('SBCL', '0.8.8.12', '2004/03/02 09:37:48');
-insert into version values ('SBCL', '0.8.8.13', '2004/03/02 16:23:22');
-insert into version values ('SBCL', '0.8.8.14', '2004/03/04 11:12:45');
-insert into version values ('SBCL', '0.8.8.15', '2004/03/05 13:02:20');
-insert into version values ('SBCL', '0.8.8.16', '2004/03/06 03:02:19');
-insert into version values ('SBCL', '0.8.8.17', '2004/03/06 19:54:51');
-insert into version values ('SBCL', '0.8.8.18', '2004/03/07 07:50:51');
-commit;
-
-begin transaction;
-insert into benchmark values ('1D-ARRAYS');
-insert into benchmark values ('2D-ARRAYS');
-insert into benchmark values ('3D-ARRAYS');
-insert into benchmark values ('ACKERMANN');
-insert into benchmark values ('BENCH-STRINGS');
-insert into benchmark values ('BIGNUM/ELEM-100-1000');
-insert into benchmark values ('BIGNUM/ELEM-1000-100');
-insert into benchmark values ('BIGNUM/ELEM-10000-1');
-insert into benchmark values ('BIGNUM/PARI-100-10');
-insert into benchmark values ('BIGNUM/PARI-200-5');
-insert into benchmark values ('BITVECTORS');
-insert into benchmark values ('BOEHM-GC');
-insert into benchmark values ('BOYER');
-insert into benchmark values ('BROWSE');
-insert into benchmark values ('CLOS/complex-methods');
-insert into benchmark values ('CLOS/defclass');
-insert into benchmark values ('CLOS/defmethod');
-insert into benchmark values ('CLOS/instantiate');
-insert into benchmark values ('CLOS/method+after');
-insert into benchmark values ('CLOS/methodcalls');
-insert into benchmark values ('CLOS/simple-instantiate');
-insert into benchmark values ('COMPILER');
-insert into benchmark values ('CRC40');
-insert into benchmark values ('CTAK');
-insert into benchmark values ('DDERIV');
-insert into benchmark values ('DEFLATE-FILE');
-insert into benchmark values ('DERIV');
-insert into benchmark values ('DESTRUCTIVE');
-insert into benchmark values ('DIV2-TEST-1');
-insert into benchmark values ('DIV2-TEST-2');
-insert into benchmark values ('EQL-SPECIALIZED-FIB');
-insert into benchmark values ('FACTORIAL');
-insert into benchmark values ('FFT');
-insert into benchmark values ('FIB');
-insert into benchmark values ('FIB-RATIO');
-insert into benchmark values ('FPRINT/PRETTY');
-insert into benchmark values ('FPRINT/UGLY');
-insert into benchmark values ('FRPOLY/BIGNUM');
-insert into benchmark values ('FRPOLY/FIXNUM');
-insert into benchmark values ('FRPOLY/FLOAT');
-insert into benchmark values ('HASH-INTEGERS');
-insert into benchmark values ('HASH-STRINGS');
-insert into benchmark values ('LOAD-FASL');
-insert into benchmark values ('MANDELBROT/COMPLEX');
-insert into benchmark values ('MANDELBROT/DFLOAT');
-insert into benchmark values ('MRG32K3A');
-insert into benchmark values ('PI-ATAN');
-insert into benchmark values ('PI-DECIMAL/BIG');
-insert into benchmark values ('PI-DECIMAL/SMALL');
-insert into benchmark values ('PI-RATIOS');
-insert into benchmark values ('PUZZLE');
-insert into benchmark values ('RICHARDS');
-insert into benchmark values ('SEARCH-SEQUENCE');
-insert into benchmark values ('SLURP-LINES');
-insert into benchmark values ('STAK');
-insert into benchmark values ('STRING-CONCAT');
-insert into benchmark values ('SUM-PERMUTATIONS');
-insert into benchmark values ('TAK');
-insert into benchmark values ('TAKL');
-insert into benchmark values ('TRAVERSE');
-insert into benchmark values ('TRIANGLE');
-insert into benchmark values ('TRTAK');
-insert into benchmark values ('WALK-LIST/MESS');
-insert into benchmark values ('WALK-LIST/SEQ');
-insert into benchmark values ('fill-strings/adjustable');
-insert into benchmark values ('MAKE-SEQUENTIAL-LIST/PUSH-NREVERSE');
-insert into benchmark values ('MAKE-SEQUENTIAL-LIST/PUSH-RPLACD');
-commit;
+CREATE INDEX result_benchmark_idx ON result USING btree (b_name);
 
 
--- select v_name, v_version, avg(seconds) as mean, stddev(seconds) / sqrt(count(seconds)) as stderr, count(seconds), release_date, field_offset from result join version on (v_name=i_name and v_version = version) join impl on i_name = name where b_name='CTAK' group by v_name, v_version, release_date, field_offset order by release_date;
+--
+-- TOC entry 11 (OID 1691286)
+-- Name: version_release_date_idx; Type: INDEX; Schema: public; Owner: sbcl-arch
+--
+
+CREATE INDEX version_release_date_idx ON "version" USING btree (release_date);
+
+
+--
+-- TOC entry 9 (OID 1691287)
+-- Name: version_is_release_idx; Type: INDEX; Schema: public; Owner: sbcl-arch
+--
+
+CREATE INDEX version_is_release_idx ON "version" USING btree (is_release);
+
+
+--
+-- TOC entry 13 (OID 1697883)
+-- Name: result_date_idx; Type: INDEX; Schema: public; Owner: sbcl-arch
+--
+
+CREATE INDEX result_date_idx ON result USING btree (date);
+
+
+--
+-- TOC entry 7 (OID 513215)
+-- Name: machine_pkey; Type: CONSTRAINT; Schema: public; Owner: sbcl-arch
+--
+
+ALTER TABLE ONLY machine
+    ADD CONSTRAINT machine_pkey PRIMARY KEY (name);
+
+
+--
+-- TOC entry 8 (OID 513217)
+-- Name: impl_pkey; Type: CONSTRAINT; Schema: public; Owner: sbcl-arch
+--
+
+ALTER TABLE ONLY impl
+    ADD CONSTRAINT impl_pkey PRIMARY KEY (name);
+
+
+--
+-- TOC entry 10 (OID 513219)
+-- Name: version_pkey; Type: CONSTRAINT; Schema: public; Owner: sbcl-arch
+--
+
+ALTER TABLE ONLY "version"
+    ADD CONSTRAINT version_pkey PRIMARY KEY (i_name, "version");
+
+
+--
+-- TOC entry 19 (OID 513221)
+-- Name: $1; Type: CONSTRAINT; Schema: public; Owner: sbcl-arch
+--
+
+ALTER TABLE ONLY "version"
+    ADD CONSTRAINT "$1" FOREIGN KEY (i_name) REFERENCES impl(name) ON UPDATE NO ACTION ON DELETE NO ACTION;
+
+
+--
+-- TOC entry 20 (OID 513225)
+-- Name: result_x_machine; Type: CONSTRAINT; Schema: public; Owner: sbcl-arch
+--
+
+ALTER TABLE ONLY result
+    ADD CONSTRAINT result_x_machine FOREIGN KEY (m_name) REFERENCES machine(name) ON UPDATE NO ACTION ON DELETE NO ACTION;
+
+
+--
+-- TOC entry 21 (OID 513229)
+-- Name: result_x_impl; Type: CONSTRAINT; Schema: public; Owner: sbcl-arch
+--
+
+ALTER TABLE ONLY result
+    ADD CONSTRAINT result_x_impl FOREIGN KEY (v_name, v_version) REFERENCES "version"(i_name, "version") ON UPDATE NO ACTION ON DELETE NO ACTION;
+
+
+--
+-- TOC entry 14 (OID 1689986)
+-- Name: benchmark_pkey; Type: CONSTRAINT; Schema: public; Owner: sbcl-arch
+--
+
+ALTER TABLE ONLY benchmark
+    ADD CONSTRAINT benchmark_pkey PRIMARY KEY (name);
+
+
+--
+-- TOC entry 22 (OID 1690056)
+-- Name: result_x_benchmark; Type: CONSTRAINT; Schema: public; Owner: sbcl-arch
+--
+
+ALTER TABLE ONLY result
+    ADD CONSTRAINT result_x_benchmark FOREIGN KEY (b_name) REFERENCES benchmark(name) ON UPDATE NO ACTION ON DELETE NO ACTION;
+
+
 
 -- arch-tag: "325cce44-ff31-11d8-8b1b-000c76244c24"
