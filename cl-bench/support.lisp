@@ -1,7 +1,7 @@
 ;;; support.lisp --- performance benchmarks for Common Lisp implementations
 ;;
 ;; Author: Eric Marsden  <emarsden@laas.fr>
-;; Time-stamp: <2004-03-14 11:48:48 asf>
+;; Time-stamp: <2004-09-05 15:43:58 asf>
 ;;
 ;;
 ;; The benchmarks consist of
@@ -23,9 +23,7 @@
 (defvar *benchmark-results* '())
 
 (defvar +implementation+
-  (concatenate 'string
-               (lisp-implementation-type) " "
-               (lisp-implementation-version)))
+  (list (lisp-implementation-type) (lisp-implementation-version)))
 
 
 (defclass benchmark ()
@@ -155,7 +153,7 @@
 
 (defun bench-report-footer ()
   (format *benchmark-output* "~%~s~%"
-          (cons +implementation+ *benchmark-results*)))
+          (append +implementation+ *benchmark-results*)))
 
 ;; generate a report to *benchmark-output* on the calling of FUNCTION
 (defun bench-report (function name times)

@@ -2,7 +2,7 @@
 ;;
 ;; Author: Eric Marsden  <emarsden@laas.fr>
 ;; rewritten by: Andreas Fuchs <asf@boinkor.net>
-;; Time-stamp: <2004-03-17 22:39:34 asf>
+;; Time-stamp: <2004-09-05 16:06:02 asf>
 ;;
 ;;
 ;; When loaded into SBCL, this reads files from
@@ -10,24 +10,7 @@
 ;;  * ploticus input files in *plot-base*
 ;;  * a tabular list of benchmarks' means and their standard errors
 
-
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (require 'asdf)
-  (require 'pg))
-
-(defpackage #:reporter
-  (:use #:cl #:pg))
-
-(in-package #:reporter)
-
-(defparameter *execute-as-standalone* t
-  "output the benchmark results and exit when this file is
-  loaded, if this is set to non-NIL.")
-
-(defparameter *plot-base* (merge-pathnames #p"plot-data/"))
-(defparameter *www-base* (merge-pathnames #p"www/"))
-
-(defvar *conn* (pg-connect "sbclarch" "sbclarch"))
+(in-package #:measure)
 
 (defvar *latest-cvs-version* (first
 			      (pg-result (pg-exec *conn*
@@ -131,68 +114,14 @@
 		       :if-exists :supersede)
       (format f "~S" tuples))))
 
-#|(defun output-table (release impls data)
-  (multiple-value-bind (release-res benchmarks) (group-benchmark-results (gethash release data))
-    (let ((impl-res nil))
-      (dolist (i impls)
-	(push (group-benchmark-results (gethash i data)) impl-res))
-      (setf impl-res (nreverse impl-res))
-      (dolist (b benchmarks)
-	(format t "~&~25a" b)
-	(let ((mean-ref (mean (gethash b release-res))))
-	  (format t "[~10,2f|~,2f]" mean-ref (standard-error (gethash b release-res)))
-	  (dolist (i impl-res)
-	    (let ((impl-res-divided (mapcar (lambda (x)
-					      (handler-case (/ x mean-ref) (error () -1)))
-					    (gethash b i))))
-	      (format t "~8,2f|~,4f" (mean impl-res-divided) (standard-error impl-res-divided)))))))))|#
 
-
-#|(defun bench-analysis.text ()
-  (multiple-value-bind (data implementations) (read-benchmark-data *benchmark-result-base*)
-    (let ((implementation-group (make-hash-table :test #'equal))
-	  (release nil)
-	  (last-release nil))
-      (dolist (impl implementations)
-	(when (release-p (implementation-version impl))
-	  (setf last-release release)
-	  (setf release impl))
-	(push impl (gethash (release-version-number (implementation-version impl)) implementation-group)))
-
-      ;; for the report mail, we only want the last 2 versions + the last release
-      (setf implementations (last implementations 2))
-      (when (member release implementations :test #'string=)
-	(setf release last-release))
-      
-    (format t "~32a~10@a" "Benchmark" "Reference")
-    (dolist (impl implementations)
-      (format t "~15@a" (implementation-version impl)))
-    (format t "~%-------------------------------------------------------------------------------------~%")
-
-    (output-table release implementations data)
-
-    (format t "~&Reference time in first column is in seconds; other columns are relative~%")
-    (format t "Reference implementation: ~a~%" release)
-    (dolist (impl implementations)
-      (format t "~&Impl ~a: ~a~%" (implementation-version impl) impl))
-    (format t "=== Test machine ===~%")
-    (format t "   Machine-instance: ~A~%" (machine-instance))
-    (format t "   Machine-type: ~A~%" (machine-type))
-    (format t "   Machine-version: ~A~%" (machine-version))
-    #+(or cmu sbcl)
-    (run-program "/usr/bin/uname" '("-a") :output t))))|#
-
-;;; This program is meant to run as a stand-alone more-or-less script,
-;;; from the build & benchmark scripts. to change that, set
-;;; *execute-as-standalone* to NIL
-
-(when *execute-as-standalone*
-;;  (sb-profile:profile "REPORTER" "PG")
-  (bench-analysis.prefab)
-  (bench-analysis.raw)
-;;  (bench-analysis.text)
-;;  (sb-profile:report)
-  (sb-ext:quit))
+(defun run-reports ()
+    ;;  (sb-profile:profile "REPORTER" "PG")
+    (bench-analysis.prefab)
+    (bench-analysis.raw)
+    ;;  (bench-analysis.text)
+    ;;  (sb-profile:report)
+    )
 
 ;; EOF
 
