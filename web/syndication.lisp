@@ -1,7 +1,8 @@
 (in-package :autobench-web)
 
+(defparameter *bugfix-revision* 2)
+
 (defparameter *go-back-days* 50)
-(defparameter *stddev-dev* 0.1)
 (defparameter *ignore-benchmarks* '(quote ("MAKE-LIST-SEQUENTIAL/RPLACD" "MAKE-LIST-SEQUENTIAL/PUSH-NREVERSE" "CRC40")))
 
 (defclass atom-handler (handler) ())
@@ -139,7 +140,7 @@
                        ((|link| |rel| "alternate" |type| "text/html"
                                 |href| ,(html-escape (format nil "http://sbcl.boinkor.net/bench/?HOST=~A&IMPLEMENTATIONS=~A&ONLY-RELEASE=~A"
                                                 host implementation (release-on-day implementation day)))))
-                       (|modified| ,(format-atom-decoded-time day 1))
+                       (|modified| ,(format-atom-decoded-time day *bugfix-revision*))
                        (|issued| ,(format-atom-decoded-time day))
                        (|id| ,(format nil "tag:sbcl.boinkor.net,~A:/bench/~A" (format-readable-decoded-time day) implementation))
                        (|created| ,(format-atom-decoded-time day))
@@ -158,7 +159,7 @@
             |xmlns:dc| "http://purl.org/dc/elements/1.1/"
             |xml:lang| "en")
     (|title| ,(format nil "Significant changes in SBCL benchmark results on ~A" host))
-    (|modified| ,(format-atom-decoded-time last-modified 1))
+    (|modified| ,(format-atom-decoded-time last-modified *bugfix-revision*))
     (|id| ,(format nil "tag:sbcl.boinkor.net,~A:/bench/~A" (nth-value 5 (get-decoded-time)) implementation))
     ((|link| |rel| "alternate"
              |type| "text/html"
@@ -169,7 +170,7 @@
   (let ((*latest-result* (first (pg-result (pg-exec *dbconn* "select max(date) from result") :tuple 0))))
     (request-send-headers request
                           :expires  (+ 1200 (get-universal-time)) ; TODO: set this to now+20 minutes (-:
-                          :last-modified *latest-result*
+                          :last-modified (+ *latest-result* *bugfix-revision*)
                           :conditional t
                           :content-type "text/xml; charset=utf-8"))
   (let ((s (request-stream request)))
