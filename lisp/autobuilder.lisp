@@ -1,4 +1,4 @@
-(in-package :measure)
+(in-package :autobench)
 
 (defun map-over-versions-in-dir (function type directory)
   (iterate (with implementation = (make-instance type))

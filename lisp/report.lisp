@@ -10,7 +10,7 @@
 ;;  * ploticus input files in *plot-base*
 ;;  * a tabular list of benchmarks' means and their standard errors
 
-(in-package #:measure)
+(in-package #:autobench)
 
 (defvar *latest-cvs-version*)
 

@@ -1,4 +1,4 @@
-(in-package :measure)
+(in-package :autobench)
 
 (defclass sbcl (implementation)
      ((name :allocation :class :initform "SBCL")))

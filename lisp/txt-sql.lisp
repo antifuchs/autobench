@@ -1,4 +1,4 @@
-(in-package #:measure)
+(in-package #:autobench)
 
 (defvar *version-translations*)
 

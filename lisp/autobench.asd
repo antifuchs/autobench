@@ -1,11 +1,11 @@
 ;;; -*- lisp -*-
 
-(cl:defpackage #:measure-system
+(cl:defpackage #:autobench-system
   (:use :cl :asdf))
 
-(cl:in-package #:measure-system)
+(cl:in-package #:autobench-system)
 
-(defsystem measure
+(defsystem autobench
     :depends-on (pg sb-posix split-sequence common-idioms iterate net-telent-date)
     :components ((:file "package")
 		 (:file "variables" :depends-on ("package"))

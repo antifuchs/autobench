@@ -1,4 +1,4 @@
-(in-package :measure)
+(in-package :autobench)
 
 (defmacro machine-ecase (&rest cases)
   "Selects forms based on the value returned by (MACHINE-INSTANCE).

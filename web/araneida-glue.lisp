@@ -1,4 +1,4 @@
-(in-package :measure.web)
+(in-package :autobench-web)
 
 (defparameter *site-name* "beaver.boinkor.net")
 (defparameter *localhost-name* "localhost")
@@ -113,29 +113,29 @@
                        #\tab
                        stderr
                        (make-string (- max-offset offset) :initial-element #\Tab))))
-    (measure::invoke-logged-program "gen-image" *ploticus-binary*
-                                    `("-png" "-o" ,(namestring (make-pathname :type "png" :defaults filename)) "-prefab" "lines"
-                                             ,(format nil "data=~A" (namestring filename)) "delim=tab" "x=1"
-                                             "ygrid=yes" "xlbl=version" "ylbl=seconds" "cats=yes" "-pagesize" "15,8" "autow=yes"
-                                             "yrange=0"
-                                             "ynearest=5" ; used to be 0.5. now ploticus doesn't scale according to the second column. TODO?
-                                             "stubvert=yes"
-                                             ,@(iterate (for (impl offset) in-relation
-                                                             (translate `(select (name field-offset)
-                                                                                 (order-by (alias
-                                                                                            (distinct
-                                                                                             (select (i.name field-offset)
-                                                                                                     (order-by
-                                                                                                      ,(apply #'emit-where-clause conditions)
-                                                                                                      (i.name))))
-                                                                                            raw)
-                                                                                           (field-offset))))
-                                                             on-connection *dbconn*)
-                                                        (for pl-s = (if (= offset 0) "" (1+ (/ offset 2))))
-                                                        ;; "name=SBCL" "y=2" "err=3" "name2=CMU Common Lisp" "y2=4" "err2=5"
-                                                        (collect (format nil "name~A=~A" pl-s impl))
-                                                        (collect (format nil "y~A=~A" pl-s (+ 2 offset)))
-                                                        (collect (format nil "err~A=~A" pl-s (+ 3 offset))))))))
+    (autobench::invoke-logged-program "gen-image" *ploticus-binary*
+                                      `("-png" "-o" ,(namestring (make-pathname :type "png" :defaults filename)) "-prefab" "lines"
+                                               ,(format nil "data=~A" (namestring filename)) "delim=tab" "x=1"
+                                               "ygrid=yes" "xlbl=version" "ylbl=seconds" "cats=yes" "-pagesize" "15,8" "autow=yes"
+                                               "yrange=0"
+                                               "ynearest=5" ; used to be 0.5. now ploticus doesn't scale according to the second column. TODO?
+                                               "stubvert=yes"
+                                               ,@(iterate (for (impl offset) in-relation
+                                                               (translate `(select (name field-offset)
+                                                                                   (order-by (alias
+                                                                                              (distinct
+                                                                                               (select (i.name field-offset)
+                                                                                                       (order-by
+                                                                                                        ,(apply #'emit-where-clause conditions)
+                                                                                                        (i.name))))
+                                                                                              raw)
+                                                                                             (field-offset))))
+                                                               on-connection *dbconn*)
+                                                          (for pl-s = (if (= offset 0) "" (1+ (/ offset 2))))
+                                                          ;; "name=SBCL" "y=2" "err=3" "name2=CMU Common Lisp" "y2=4" "err2=5"
+                                                          (collect (format nil "name~A=~A" pl-s impl))
+                                                          (collect (format nil "y~A=~A" pl-s (+ 2 offset)))
+                                                          (collect (format nil "err~A=~A" pl-s (+ 3 offset))))))))
 
 (defun unix-time-to-universal-time (unix-time)
   (declare (integer unix-time))

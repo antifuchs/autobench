@@ -1,4 +1,4 @@
-(in-package :measure)
+(in-package :autobench)
 
 (defclass implementation ()
      ((version :accessor impl-version :initform nil :initarg :version)
