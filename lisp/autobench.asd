@@ -12,6 +12,7 @@
 		 (:file "txt-sql" :depends-on ("variables"))
 		 (:file "implementation" :depends-on ("variables"))
 		 (:file "sbcl" :depends-on ("variables" "implementation"))
+                 (:file "cmucl" :depends-on ("variables" "implementation"))
 		 (:file "autobuilder" :depends-on ("implementation"))))
 
 ;;; arch-tag: "2522b003-ff5f-11d8-8b1b-000c76244c24"
