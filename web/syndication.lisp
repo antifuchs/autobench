@@ -7,14 +7,14 @@
 (defclass atom-handler (handler) ())
 
 (defun explain-change (day benchmark impl from-revision to-revision from to)
-  `(|li| ,(html-escape
-           (format nil "run time for benchmark <a href=\"http://sbcl.boinkor.net/bench/?HOST=~A&IMPLEMENTATIONS=~A&ONLY-RELEASE=~A#~A\">~A</a> ~
+  `(|li| ,(format nil "run time for benchmark <a href=\"~A\">~A</a> ~
                        ~A from ~As to ~As between ~A revision ~A and ~A"
-                   "walrus.boinkor.net" ; FIXME
-                   impl (release-on-day impl day) benchmark
-                   benchmark
+                   (html-escape (format nil "http://sbcl.boinkor.net/bench/?HOST=~A&IMPLEMENTATIONS=~A&ONLY-RELEASE=~A#~A"
+                                        "walrus.boinkor.net" ; FIXME
+                                        impl (release-on-day impl day) benchmark))
+                    benchmark
                    (if (< from to) "increased" "decreased")
-                   from to impl from-revision to-revision))))
+                   from to impl from-revision to-revision)))
 
 (defun summarize-day/benchmark (day b-name v-name results)
   (let ((first-r (first results))
