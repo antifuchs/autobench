@@ -16,17 +16,20 @@
           post-dec)))
 
 (defun summarize-day/benchmark (day benchmark impl from to f-err t-err)
-  `(|li| ,(format nil "Run time for benchmark <a href=\"~A\">~A</a> ~
-                       ~A from (~@? &#xb1; ~@?)s to (~@? &#xb1; ~@?)s" 
-                   (html-escape (format nil "http://sbcl.boinkor.net/bench/?HOST=~A&IMPLEMENTATIONS=~A&ONLY-RELEASE=~A#~A"
-                                        "walrus.boinkor.net" ; FIXME
-                                        impl (release-on-day impl day) benchmark))
+  (let ((percentage (round (* 100 (/ (abs (- to from))
+                                    (max from to))))))
+    `(|li| ,(format nil "Run time for benchmark <a href=\"~A\">~A</a> ~
+                       ~A from (~@? &#xb1; ~@?)s to (~@? &#xb1; ~@?)s (~A~A%)" 
+                    (html-escape (format nil "http://sbcl.boinkor.net/bench/?HOST=~A&IMPLEMENTATIONS=~A&ONLY-RELEASE=~A#~A"
+                                         "walrus.boinkor.net" ; FIXME
+                                         impl (release-on-day impl day) benchmark))
                     benchmark
-                   (if (< from to) "increased" "decreased")
-                   (digits-format-string from f-err) from
-                   (digits-format-string from f-err) f-err
-                   (digits-format-string to t-err) to
-                   (digits-format-string to t-err) t-err)))
+                    (if (< from to) "<span style=\"color:#FF0000;\">increased</span>" "<span style=\"color:#00FF00;\">decreased</span>")
+                    (digits-format-string from f-err) from
+                    (digits-format-string from f-err) f-err
+                    (digits-format-string to t-err) to
+                    (digits-format-string to t-err) t-err
+                    (if (< from to) "+" "-") percentage))))
 
 (defun days-ago (days)
   (- (get-universal-time) (* 86400 days)))
@@ -145,7 +148,7 @@
                                                                              (* (/ (stddev y.seconds) (sqrt (count y.seconds)))
                                                                                 (/ (stddev y.seconds) (sqrt (count y.seconds))))))))))))
                                                 on-connection *dbconn*)
-                                           (collect (summarize-day/benchmark pp-day b-name implementation t-avg y-avg t-err y-err))))
+                                           (collect (summarize-day/benchmark pp-day b-name implementation y-avg t-avg y-err t-err))))
                              (when impl-entry
                                (collect `(|li| "from " ,implementation " revision " ,p-version " to " ,version ":"
                                                (|ul| 
