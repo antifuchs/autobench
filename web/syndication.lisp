@@ -130,20 +130,21 @@
              |href| "http://sbcl.boinkor.net/bench/"))
     ,@entries)))
 
-#|(defmethod handle-request-response ((handler atom-handler) method request)
-  (let ((*latest-result* (first (pg-result (pg-exec *dbconn* "select max(date) from result") :tuple 0))))
-    (request-send-headers request
-                          :expires  (+ 1200 (get-universal-time)) ; TODO: set this to now+20 minutes (-:
-                          :last-modified *latest-result*
-                          :conditional t) 
-    (let ((s (request-stream request)))
-      (format s "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\" \"http://www.w3.org/TR/html4/loose.dtd\">")
-      (param-bind ((implementations '("SBCL") t)
-                   (host "walrus.boinkor.net")) request
-        (emit-significant-changes s
-                                  :implementations implementations
-                                  :host host)))))
+(defmethod handle-request-response ((handler atom-handler) method request)
+  (request-send-headers request
+                        :expires  (+ 1200 (get-universal-time)) ; TODO: set this to now+20 minutes (-:
+                        :last-modified *latest-result*
+                        :conditional t)
+  (let ((s (request-stream request)))
+    (format s "<?xml version=\"1.0\" encoding=\"utf-8\"?>")
+    (param-bind ((implementation "SBCL" t)
+                 (host "walrus.boinkor.net")) request
+      (emit-significant-changes s
+                                :implementation implementation
+                                :host host))))
 
-|#
+(install-handler (http-listener-handler *bench-listener*)
+		 (make-instance 'atom-handler)
+		 (urlstring *atom-url*) nil)
 
 ;;; arch-tag: "17408c28-fd4d-488d-956c-17590e0c8494"

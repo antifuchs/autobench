@@ -27,6 +27,7 @@
                                          "/prefab/"))
 
 (defparameter *index-url* (merge-url *base-url* "index/"))
+(defparameter *atom-url* (merge-url *base-url* "atom/")) ; see syndication.lisp
 
 (defvar *bench-listener*)
 (let ((fwd-url (copy-url *base-url*)))
@@ -219,7 +220,7 @@
                                         (collect `(,version ,(format nil "~A (~A)" version steps))))))
            ((input :type :submit))
            (h2 "Syndicate")
-           ((a :href "atom")
+           ((a :href ,*atom-url*)
             "Atom 0.3")))
          ((div :id "content")
           ,@(iterate (for (benchmark unit) in benchmarks)
