@@ -64,17 +64,6 @@
                    (progn (write-char #\_ s) (princ (char-code c) s)))))
     output))
 
-(defun sqlquote (str)
-  (with-output-to-string (s)
-    (iterate (for c in-vector str)
-             (case c
-               (#\\
-                (write-char #\\ s) (write-char #\\ s))
-               (#\'
-                (write-char #\' s) (write-char #\' s))
-               (otherwise
-                (write-char c s))))))
-
 (defun emit-where-clause (&key benchmark implementations only-release host earliest latest &allow-other-keys)
   `(where
     (join (join (as result r)
@@ -228,7 +217,10 @@
                                                                            (> ,subsel 0)))))
                                              on-connection *dbconn*)
                                         (collect `(,version ,(format nil "~A (~A)" version steps))))))
-           ((input :type :submit))))
+           ((input :type :submit))
+           (h2 "Syndicate")
+           ((a :href "atom")
+            "Atom 0.3")))
          ((div :id "content")
           ,@(iterate (for (benchmark unit) in benchmarks)
                      (collect `(h1 ,benchmark))

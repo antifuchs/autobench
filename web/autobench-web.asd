@@ -8,7 +8,8 @@
 (defsystem autobench-web
     :depends-on (autobench pg split-sequence iterate iterate-pg araneida common-idioms sexql)
     :components ((:file "package")
-                 (:file "araneida-glue" :depends-on ("package"))))
+                 (:file "araneida-glue" :depends-on ("package"))
+                 (:file "syndication" :depends-on ("araneida-glue"))))
 
 
 
