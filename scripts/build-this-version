@@ -1,0 +1,31 @@
+#!/bin/sh -e
+
+. `dirname $0`/../functions
+
+COMPILELOG=${1:-/dev/stdout}
+HTTPLOG="http://sbcl.boinkor.net/failure-logs/$(basename $COMPILELOG)"
+
+MVER=`sbcl-version`
+ARCHIVEDIR=$BASE/build-archive/$MVER
+
+if [ -f $ARCHIVEDIR/sbcl.core ] ; then :
+else
+	echo $HOST
+	if ./make.sh "$HOST" 2>>$COMPILELOG >&2 ; then
+		mkdir $ARCHIVEDIR || true
+		mv src/runtime/sbcl $ARCHIVEDIR
+		mv output/sbcl.core $ARCHIVEDIR
+		#touch -t `cat $DIR/.date` $ARCHIVEDIR
+	elif [ "$NOTIFY_SBCL_DEV" = 1 ] ; then
+		# notify sbcl-devel
+		(echo "Build of $MVER (which is CVS HEAD, apparently) failed."
+	 	 echo "The last 25 lines surrounding the error are:"
+		 echo
+		 grep -25 Error $COMPILELOG
+		 mv $COMPILELOG ~/www/sbcl.boinkor.net/failure-logs
+		 echo "Full compile log at $HTTPLOG") | mail -s "Automatic build of $MVER failed on `uname -s`: `hostname`" sbcl-devel@lists.sourceforge.net
+		exit 1
+	fi
+fi
+
+# arch-tag: "1009afbf-ff31-11d8-8b1b-000c76244c24"

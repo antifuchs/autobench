@@ -1,0 +1,12 @@
+#!/bin/sh -e
+
+. `dirname $0`/../functions
+
+REPORTLOG=${1:-/dev/stdout}
+cd $BASE
+
+
+sbcl $COMMON_OPTS --load report.lisp 2>>$REPORTLOG >&2
+plot 2>>$REPORTLOG >&2
+
+# arch-tag: "100d88b1-ff31-11d8-8b1b-000c76244c24"

@@ -1,0 +1,50 @@
+#!/bin/sh
+
+. `dirname $0`/../functions
+
+INPUT=$BASE/plot-data
+OUTPUT=$BASE/www
+
+unit-for(){
+    TEST=$1
+
+    if [ -f units/$TEST ] ; then
+	cat units/$TEST
+    else
+	cat units/.default
+    fi
+}
+
+do-benchmarks(){
+    DIR=$1
+
+    rm $OUTPUT/$DIR/,html-body
+    echo "<ul>">>$OUTPUT/$DIR/,html-body
+    for i in `find $INPUT/$DIR -type d -maxdepth 1 | sort -nr` ; do
+	if [ $i = $INPUT/$DIR ] ; then :
+	else
+	    echo "<li> <a href=`basename $i`/index.html>Release `basename $i`</a></li>" >>$OUTPUT/$DIR/,html-body
+	fi
+    done
+    echo "</ul>">>$OUTPUT/$DIR/,html-body
+
+    for i in `find $INPUT/$DIR/ -type f -maxdepth 1 | sort` ; do
+	pl -png -o $OUTPUT/$DIR/`basename $i`.png -prefab lines \
+	    data=$i delim=tab x=1 y=2 err=3 y2=4 err2=5 ygrid=yes xlbl=version ylbl=$(unit-for $(basename $i)) cats=yes \
+	    -pagesize '15,8' autow=yes yrange=0 ynearest=0.5 name=SBCL name2=CMUCL stubvert=yes
+	cat >>$OUTPUT/$DIR/,html-body <<EOF
+<h1>Test `basename $i`</h1>
+<a href="http://sbcl-internals.cliki.net/`basename $i`_benchmark">Annotate on the sbcl-internals wiki</a><br/>
+<img src="`basename $i`.png" />
+EOF
+    done
+    cat $BASE/html-header $OUTPUT/$DIR/,html-body $BASE/html-footer > $OUTPUT/$DIR/index.html
+}
+
+rmdir $INPUT/* 2>/dev/null
+for i in `find $INPUT/. -type d` ; do
+    mkdir  $OUTPUT/`basename $i` 2>/dev/null
+    do-benchmarks `basename $i`
+done
+
+# arch-tag: "100af764-ff31-11d8-8b1b-000c76244c24"

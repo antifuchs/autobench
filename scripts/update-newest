@@ -1,0 +1,47 @@
+#!/bin/sh -e
+
+. `dirname $0`/../functions
+
+DIR=$1;shift
+UPTOREVISION=$1;shift||true
+BENCHMARKS=$@
+
+TTV=`tla tree-version $DIR`
+
+cd $DIR
+
+REPORTLOG="$DIR/../log.report/run-`date +%Y-%m-%d`"
+UPDATELOG="$DIR/../log.compile/update-`date +%Y-%m-%d`"
+
+FIRSTVERSION=`sbcl-version`
+for i in `tla missing | print-until $UPTOREVISION`; do
+	MISSING=$TTV--$i
+	CVER=`sbcl-version`
+
+	tla update $MISSING 2>$UPDATELOG >&2
+
+	MVER=`sbcl-version`
+	COMPILELOG="$DIR/../log.compile/build-`date +%Y-%m-%d`-$MVER"
+	BENCHLOG="$DIR/../log.benchmark/benchmark-`date +%Y-%m-%d`-$MVER"
+
+	# extreme hack
+	if [ -z "$UPTOREVISION" ] && [ 0 = `tla missing | wc -l` ] ; then
+		NOTIFY_SBCL_DEV=1
+	else
+		NOTIFY_SBCL_DEV=0
+	fi
+	export NOTIFY_SBCL_DEV
+
+	benchmark-version $DIR 3 $BENCHMARKS || true
+	rm -f $DIR/,date || true
+done
+
+if [ -z "$UPTOREVISION" ]; then
+	build-manual $DIR
+fi
+
+LASTVERSION=`sbcl-version`
+
+echo run completed from $FIRSTVERSION to $LASTVERSION
+
+# arch-tag: "100ec314-ff31-11d8-8b1b-000c76244c24"

@@ -1,0 +1,23 @@
+#!/bin/sh -e
+
+LOG=${1:-/dev/stdout}
+PSQLOPT='-q'
+
+. `dirname $0`/../functions
+
+if [ -f ,date ] ; then :
+else
+	# find out the date of this revision
+	tla logs -r | head -1 | xargs -n 1 tla cat-log | grep 'Date.*/' | cut -f 2- -d ' ' >,date
+fi
+
+DATE=`cat ,date`
+
+if [ -z "$DATE" ] ; then
+	echo "unknown date!" >&2
+	exit 1
+else
+	echo "insert into version values ('SBCL', '`sbcl-version`', '$DATE');" | psql $PSQLOPT 2>>$LOG >&2
+fi
+
+# arch-tag: "1005888c-ff31-11d8-8b1b-000c76244c24"

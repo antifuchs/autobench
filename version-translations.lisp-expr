@@ -1,0 +1,9 @@
+;;; version number translations, formatted as an alist
+
+(("SBCL 0.8.0.1"  . "SBCL 0.8.0")
+ ("SBCL 0.8.2.12" . "SBCL 0.8.2")
+ ("SBCL 0.8.7.1"  . "SBCL 0.8.7")
+ ("CMU Common Lisp Post-18e 2003-11-01T11:37:33Z [src-head]" . "CMU Common Lisp pre-19a")
+ ("CMU Common Lisp Snapshot-2004-05" . "CMU Common Lisp pre-19a/2004-05"))
+
+;;; arch-tag: "de01390a-ff30-11d8-8b1b-000c76244c24"
