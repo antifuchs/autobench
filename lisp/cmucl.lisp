@@ -20,12 +20,13 @@
 
 (defmethod run-benchmark ((impl cmucl))
   (with-unzipped-implementation-files impl
-    (invoke-logged-program "bench-cmucl" "/usr/bin/env" '("bash" "run-cmucl.sh")
-			   :environment `(,(format nil "CMUCL=~A" (namestring (implementation-cached-file-name impl "lisp")))
-					  ,(format nil "CMUCLOPT=-batch -core ~A --boink-core-file ~A"
-						   (namestring (implementation-cached-file-name impl "lisp.core"))
-						   (namestring (implementation-cached-file-name impl "lisp.core")))
-					  ,@(sb-ext:posix-environ)))))
+    (with-current-directory *cl-bench-base*
+      (invoke-logged-program "bench-cmucl" "/usr/bin/env" '("bash" "run-cmucl.sh")
+                             :environment `(,(format nil "CMUCL=~A" (namestring (implementation-cached-file-name impl "lisp")))
+                                             ,(format nil "CMUCLOPT=-batch -core ~A --boink-core-file ~A"
+                                                      (namestring (implementation-cached-file-name impl "lisp.core"))
+                                                      (namestring (implementation-cached-file-name impl "lisp.core")))
+                                             ,@(sb-ext:posix-environ))))))
 
 (defmethod implementation-required-files ((impl cmucl))
   (declare (ignore impl))

@@ -1,0 +1,88 @@
+= Autobench, an incremental benchmark runner for lisp implementations =
+
+Autobench builds lisp implementations in version increments and runs
+benchmarks on the resulting images. It keeps a build archive
+consisting of every version that was built, to ease re-running of
+benchmarks. Autobench uses (and includes) the CL-BENCH suite published
+by Eric Marsden.
+
+Currently, autobench supports SBCL and CMUCL. There is a protocol for
+autobuilding/benchmarking lisp implementations, which makes adding
+support for a new implementation very easy.
+
+== Installation ==
+
+Autobench needs to run in SBCL as a host.
+
+Installation is similar to every other ASDFized package:
+
+symlink lisp/autobench.asd to one of your asdf:*central-repository*
+directories. Then, issue
+
+ (asdf:oos 'asdf:load-op :autobench)
+
+on the Lisp's REPL.
+
+In addition to the packages listed in the lisp/autobench.asd file,
+autobench requires a patched version of net-telent-date to support
+incremental autobuilding of SBCL. This patch, applied to the
+net-telent-date base directory will do the trick:
+
+diff -urN net-telent-date_0.41.timezoneless/parse-time.lisp net-telent-date_0.41/parse-time.lisp
+--- parse-time.lisp	2005-02-10 09:02:05.000000000 +0100
++++ parse-time.lisp	2004-10-03 23:11:18.000000000 +0200
+@@ -83,7 +83,8 @@
+ 	    ("edt" . 4) ("cst" . 6)
+ 	    ("cdt" . 5) ("mst" . 7)
+ 	    ("mdt" . 6)	("pst" . 8)
+-	    ("pdt" . 7)) 
++	    ("pdt" . 7) ("cet" . -1)
++            ("cest" . -2))
+ 	  *zone-strings*)
+ 
+ (hashlist '(("yesterday" . yesterday)  ("today" . today)
+
+Next, edit lisp/variables.lisp and customize the variable values. The
+machine-ecase macro should help you customize autobench for many
+machines. Most interesting variables:
+
+ * *DBCONN* - specifies the connection to the database in which
+    autobench stores benchmark results.
+
+ * *BASE-DIR* - specifies the directory in which you installed
+    autobench.
+
+ * *PACK-BINARY* and *UNPACK-BINARY* - binaries that we use to
+    compress / uncompress the required files for a lisp implementation
+    in the build archive.
+
+ * *RUN-BENCHMARK-N-TIMES* - the number of times to run bechmarks for
+    each revision. Meaningful statistics can be extracted from 3 or
+    more runs.
+
+ * *TLA-BINARY* - the tla (tom lord's arch) binary used to
+    incrementally update SBCL builds.
+
+== Usage ==
+
+After customizing stuff in lisp/variables.lisp, you can start using
+autobench. There are a few ways you can use it:
+
+ * automatically build & benchmark SBCL:
+
+   1. check out an older revision SBCL (the one you want to start
+      benchmarking from) from the arch archive at
+      http://sbcl.boinkor.net into a directory of your choice.
+   2. run (autobench:build-and-benchmark-new 'autobench:sbcl #P"/path/to/the/directory/")
+      (don't forget the forward slash)
+   3. wait some time (-:
+
+ * benchmark pre-built images of implementations:
+
+   1. copy the required files for the implementation (typically the
+      binary and a core file) into
+      *VERSION-CACHE-DIR*/<implementation>/<version>/.
+   2. run (benchmark-versions 'autobench:<implementation> '(<version> <version2> ...))
+
+   You can also perform the second step if you want to re-run
+   benchmarks for a particular implementation.
