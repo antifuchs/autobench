@@ -220,7 +220,7 @@
                                         (collect `(,version ,(format nil "~A (~A)" version steps))))))
            ((input :type :submit))
            (h2 "Syndicate")
-           ((a :href ,*atom-url*)
+           ((a :href ,(urlstring *atom-url*))
             "Atom 0.3")))
          ((div :id "content")
           ,@(iterate (for (benchmark unit) in benchmarks)
