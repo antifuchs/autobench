@@ -22,8 +22,8 @@
   (ignore-pg-errors
    (pg-exec *dbconn* (format nil "insert into impl values ('~A', (select max(field_offset)+2 from impl))" (impl-name impl))))
   (ignore-pg-errors
-   (pg-exec *dbconn* (format nil "insert into version values ('~A', '~A', '~A', ~A)"
-                             (impl-name impl) (impl-version impl) (net.telent.date:universal-time-to-rfc-date date)
+   (pg-exec *dbconn* (format nil "insert into version (i_name, version, release_date, is_release) values ('~A', '~A', ~A, ~A)"
+                             (impl-name impl) (impl-version impl) date
                              (if (release-p (impl-version impl)) "TRUE" "FALSE")))))
 
 (defun read-benchmark-data (dir machine-name)
@@ -40,21 +40,13 @@
               (destructuring-bind (i-name i-version) (translate-version (list impl version))
                 (let* ((stat (sb-posix:stat file))
                        (mtime (sb-posix::stat-mtime stat)))
-                  ;; first, make sure the benchmark exists; we don't
-                  ;; do this below, because we insert all values in
-                  ;; one transaction. benchmarks should be inserted
-                  ;; regardless of psql errors.
-                  (dolist (b benchmark)
-                    (destructuring-bind (b-name r-secs u-secs &rest ignore) b
-                      (declare (ignore r-secs ignore u-secs))
-                      (ignore-pg-errors
-                       (pg-exec *dbconn* (format nil "insert into benchmark values ('~A')" b-name)))))
                   (with-pg-transaction *dbconn*
                     (dolist (b benchmark)
                       (destructuring-bind (b-name r-secs u-secs &rest ignore) b
                         (declare (ignore r-secs ignore))
 				  
-                        (pg-exec *dbconn* (format nil "insert into result values (~A::int4::abstime, '~A', '~A', '~A', '~A', ~f)"
+                        (pg-exec *dbconn* (format nil "insert into result (date, v_name, v_version, b_name, m_name, seconds) ~
+                                                       values (to_universal_time(~A::int4::abstime), '~A', '~A', '~A', '~A', ~f)"
                                                   mtime i-name i-version b-name machine-name u-secs))))))))
           (cl:end-of-file () nil))))
     (rename-file file (ensure-directories-exist

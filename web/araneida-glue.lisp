@@ -1,12 +1,13 @@
 (in-package :measure.web)
 
-(defparameter *site-name* "localhost")
-(defparameter *internal-port* 8000)
+(defparameter *site-name* "beaver.boinkor.net")
+(defparameter *localhost-name* "localhost")
+(defparameter *external-port* 80)
 
 (defparameter *base-url* (merge-url
 			  (make-url :scheme "http"
 				    :host *site-name*
-				    :port *internal-port*)
+				    :port *external-port*)
 			  "/bench/"))
 
 (defparameter *webserver-url* (merge-url (make-url :scheme "http"
@@ -21,15 +22,20 @@
 (defparameter *prefab-base* #p"/home/asf/hack/sb-bench/+prefab/")
 (defparameter *ploticus-binary* "/usr/bin/ploticus")
 
-(defparameter *bench-listener*
-  (make-instance #+sbcl #+sb-thread 'threaded-http-listener
-                 #+sbcl #-sb-thread 'araneida:serve-event-http-listener
-                 #-sbcl 'threaded-http-listener
-                 :address #(127 0 0 1)
-                 :port (araneida:url-port *base-url*)))
+(defvar *bench-listener*)
+(let ((fwd-url (copy-url *base-url*)))
+  (setf (url-port fwd-url) (+ 1024 (url-port *base-url*)))
+  (setf (url-host fwd-url) *localhost-name*)
+  (setf *bench-listener*
+        (make-instance #+sbcl #+sb-thread 'threaded-reverse-proxy-listener
+                       #+sbcl #-sb-thread 'araneida:serve-event-reverse-proxy-listener
+                       #-sbcl 'threaded-reverse-proxy-listener
+                       :address #(127 0 0 1)
+                       :port (araneida:url-port fwd-url)
+                       :translations `((,(urlstring *base-url*) ,(urlstring fwd-url))))))
 
+(defvar *latest-result*) ; latest result entry's date in the DB
 (defclass index-handler (handler) ())
-(defclass choose-handler (handler) ())
 
 (defun last-version ()
   (second (pg-result (pg-exec *dbconn*
@@ -72,8 +78,8 @@
           :on (= v.i-name i.name))
     (and (= r.b-name ,benchmark)
           ,(if only-release
-               `(and (>= v.release-date (|::| (|::| ,earliest int4) abstime))
-                     (<= v.release-date (|::| (|::| ,latest int4) abstime)))
+               `(and (>= v.release-date ,earliest)
+                     (<= v.release-date ,latest))
                'is-release)
           (= m-name ,host)
           (in i.name ',implementations))))
@@ -132,16 +138,9 @@
                                                         (collect (format nil "err~A=~A" pl-s (+ 3 offset))))))))
 
 (defun unix-time-to-universal-time (unix-time)
+  (declare (integer unix-time))
   (+ 2208988800 ; difference in seconds 1970-01-01 0:00 and 1900-01-01 0:00
      unix-time))
-
-
-(defun ensure-image-files-exist (benchmarks &rest conditions)
-  (let ((*latest-result* (first (pg-result (pg-exec *dbconn* "select max(date) from result") :tuple 0))))
-    (declare (special *latest-result*))
-    (iterate (for (benchmark) in benchmarks)
-             (apply #'ensure-image-file-exists :benchmark benchmark
-                    conditions))))
 
 (defun ensure-image-file-exists (&rest conditions)
   (declare (special *latest-result*))
@@ -160,43 +159,67 @@
                          (make-pathname :type "png"
                                         :defaults (apply #'file-name-for conditions))))))
 
-(defun emit-image-index (s &rest args &key only-release implementations &allow-other-keys)
+(defun emit-image-index (s &rest args &key host only-release implementations &allow-other-keys)
   (let* ((benchmarks (pg-result (pg-exec *dbconn* "select distinct b_name from result order by b_name") :tuples))
-         (format-string "SELECT ~A(release_date)::abstime::int4 FROM VERSION AS V2 WHERE (V2.VERSION) LIKE '~A' || '.%'")
-         (earliest (first (pg-result (pg-exec *dbconn* (format nil format-string "min" only-release)) :tuple 0)))
-         (latest (first (pg-result (pg-exec *dbconn* (format nil format-string "max" only-release)) :tuple 0))))
-    (apply #'ensure-image-files-exist benchmarks :earliest earliest :latest latest args)
+         (format-string "SELECT ~A(release_date) FROM VERSION AS V2 WHERE (V2.VERSION) LIKE ~A || '.%'")
+         (earliest (first (pg-result (pg-exec *dbconn* (format nil format-string "min" (sexql::quote-and-escape only-release))) :tuple 0)))
+         (latest (first (pg-result (pg-exec *dbconn* (format nil format-string "max" (sexql::quote-and-escape only-release))) :tuple 0))))
+    (iterate (for (benchmark) in benchmarks)
+           (apply #'ensure-image-file-exists
+                  :benchmark benchmark
+                  :earliest earliest
+                  :latest latest
+                  args))
     (html-stream s
       `(html
-	(head (title "SBCL Benchmarks"))
+	(head (title "SBCL Benchmarks")
+              ((link :rel "stylesheet" :title "Style Sheet" :type "text/css" :href "/bench.css")))
 	(body
+         ((div :id "banner")
+          (h1 ((a :href ,(urlstring *index-url*))
+               "SBCL benchmarks"))
+          (h2 "Displaying " ,(if only-release (format nil "release ~A" only-release) "all releases")))
          ((div :id "sidebar")
           ((form :method :get :action ,(urlstring *index-url*))
+           ((input :type "hidden" :value ,host :name :host))
+           (h2 "Machine")
+           (ul
+            ,@(iterate (for (machine) in-relation
+                            (translate `(distinct (select (m_name) result)))
+                            on-connection *dbconn*)
+                       (collect `(li ((a :href ,(format nil "~A?host=~A" (urlstring *index-url*) machine)
+                                         ,@(if (equal host machine)
+                                               (list :class "selected")
+                                               ()))
+                                      ,machine)))))
+           (h2 "Version")
            ,(make-multi-select :implementations implementations
                                (iterate (for (impl) in-relation
                                              (translate `(select (name) impl))
                                              on-connection *dbconn*)
                                         (collect `(,impl ,impl))))
+           (h2 "Release")
            ,(make-select :only-release only-release
-                         (cons '(nil "None")
+                         (cons '(nil "All releases")
                                (iterate (for (version steps) in-relation
                                              (let ((subsel `(select ((count *))
                                                                     (where (as version v2)
                                                                            (like v2.version (++ v.version ".%"))))))
                                                (translate `(select (version ,subsel)
                                                                    (where (as version v)
-                                                                          (> ,subsel 0))))) 
+                                                                           (> ,subsel 0)))))
                                              on-connection *dbconn*)
                                         (collect `(,version ,(format nil "~A (~A)" version steps))))))
            ((input :type :submit))))
-         ((div :id benchmarks)
+         ((div :id "content")
           ,@(iterate (for (benchmark) in benchmarks)
                      (collect `(h1 ,benchmark))
                      (collect `((img :src ,(apply #'url-for-image
                                                   :benchmark benchmark
                                                   :earliest earliest
                                                   :latest latest
-                                                  args)))))))))))
+                                                  args)
+                                     :alt ,benchmark))))))))))
 
 (defun enteredp (param)
   (and param (not (equal "" param))))
@@ -204,9 +227,9 @@
 (defmacro param-bind ((&rest args) request &body body)
   (with-gensyms (unhandled-part params argstring)
     `(let* ((,unhandled-part (request-unhandled-part ,request))
-            (,argstring (urlstring-unescape (subseq ,unhandled-part (mismatch ,unhandled-part "?"))))
-            (,params (print (mapcar (lambda (pp) (split-sequence:split-sequence #\= pp))
-                             (split-sequence:split-sequence #\& ,argstring))))
+            (,argstring (subseq ,unhandled-part (mismatch ,unhandled-part "?")))
+            (,params (mapcar (lambda (pp) (mapcar #'urlstring-unescape (split-sequence:split-sequence #\= pp)))
+                             (split-sequence:split-sequence #\& ,argstring)))
             ,@(loop for (arg default-value is-list) in args
                     collect `(,arg ,(if is-list
                                         `(mapcar #'second
@@ -215,9 +238,6 @@
                                                                 ,params
                                                                 :key #'first))
                                         `(second (assoc ,(symbol-name arg) ,params :test #'string-equal))))))
-       (print ,unhandled-part)
-       (print ,argstring)
-       (print ,params)
        ,@(loop for (arg default) in args
                collect `(cond
                           ((not (enteredp ,arg))
@@ -227,29 +247,34 @@
        ,@body)))
 
 (defmethod handle-request-response ((handler index-handler) method request)
-  (request-send-headers request :expires 0) ; TODO: set this to 20 minutes (-:
-  (let ((s (request-stream request)))
-    (param-bind ((implementations '("SBCL" "SBCL-character") t)
-                 (only-release nil) ; TODO: this mode should display the last CVS version's results.
-                 (host "walrus.boinkor.net")) request
+  (let ((*latest-result* (first (pg-result (pg-exec *dbconn* "select max(date) from result") :tuple 0))))
+    (request-send-headers request
+                          :expires  (+ 1200 (get-universal-time)) ; TODO: set this to now+20 minutes (-:
+                          :last-modified *latest-result*
+                          :conditional t) 
+    (let ((s (request-stream request)))
+      (format s "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\" \"http://www.w3.org/TR/html4/loose.dtd\">")
+      (param-bind ((implementations '("SBCL" "SBCL-character") t)
+                   (only-release nil) ; TODO: this mode should display the last CVS version's results.
+                   (host "walrus.boinkor.net")) request
         (emit-image-index s
                           :implementations implementations
                           :only-release only-release
-                          :host host))))
+                          :host host)))))
 
 (defun make-select (name default options)
   `((select :name ,name)
     ,@(loop for (op text) in options
 	    if (equal default op)
-	      collect `((option :value ,op :selected "") ,text)
+	      collect `((option :value ,op :selected "selected") ,text)
 	    else
 	      collect `((option :value ,op) ,text))))
 
 (defun make-multi-select (name selected options)
-  `((select :name ,name :multiple t :size 3)
+  `((select :name ,name :multiple "multiple" :size 3)
     ,@(loop for (op text) in options
 	    if (member op selected :test #'string=)
-	      collect `((option :value ,op :selected "") ,text)
+	      collect `((option :value ,op :selected "selected") ,text)
 	    else
 	      collect `((option :value ,op) ,text))))
 
