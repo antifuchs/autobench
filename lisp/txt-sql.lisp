@@ -8,6 +8,8 @@
       (<= (count #\. vnum) 2)))
 
 (defun translate-version (version)
+  (when (string= "CMU Common Lisp" (first version))
+    (setf (first version) "CMUCL"))
   (let ((v (assoc version *version-translations* :test #'equal)))
     (if v
         (cdr v)

@@ -42,7 +42,7 @@ this should be >=3.")
 For improved compilation speed, I recommend using CMUCL 18e (-:")
 
 
-(defparameter *cmucl-snapshot-format* "cmucl-~A-~A-x86-FreeBSD.tar.bz2")
+(defparameter *cmucl-snapshot-format* "../cmucl-~2,1,0,'0@A-~2,1,0,'0@A-x86-FreeBSD.tar.bz2")
 ;;; pathnames
 (defparameter *cl-bench-base* (merge-pathnames #p"cl-bench/" *base-dir*))
 (defparameter *log-directory* (merge-pathnames #p"+log/" *base-dir*))
