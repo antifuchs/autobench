@@ -27,7 +27,7 @@ cp -Rp sbcl manual
 
 # make a tarball and unpack it in SBCL's web space
 
-tar zcf "$DESTDIR"/sbcl-manual.tgz manual
-cat "$DESTDIR"/sbcl-manual.tgz | ssh $UPLOADER_NAME@shell.sf.net cd /home/groups/s/sb/sbcl/htdocs ";" tar zxf -
+tar zcf sbcl-manual.tgz manual
+cat sbcl-manual.tgz | ssh $UPLOADER_NAME@shell.sf.net cd /home/groups/s/sb/sbcl/htdocs ";" tar zxf -
 
 # arch-tag: "100855f9-ff31-11d8-8b1b-000c76244c24"
