@@ -1,6 +1,6 @@
 (in-package :measure.web)
 
-(defparameter *site-name* "beaver.boinkor.net")
+(defparameter *site-name* "localhost")
 (defparameter *internal-port* 8000)
 
 (defparameter *base-url* (merge-url
@@ -25,7 +25,7 @@
   (make-instance #+sbcl #+sb-thread 'threaded-http-listener
                  #+sbcl #-sb-thread 'araneida:serve-event-http-listener
                  #-sbcl 'threaded-http-listener
-                 :address #(213 235 219 107)
+                 :address #(127 0 0 1)
                  :port (araneida:url-port *base-url*)))
 
 (defclass index-handler (handler) ())
@@ -43,11 +43,14 @@
 
 (defun filesys-escape-name (name)
   "Escape name so that it is safe as a file name under unixoids and DOSoids."
-  (with-output-to-string (s)
-    (iterate (for c in-vector name)
-             (if (or (alphanumericp c) (member c '(#\- #\.)))
-                 (write-char c s)
-                 (progn (write-char #\_ s) (princ (char-code c) s))))))
+  (declare (string name))
+  (let ((output (make-array (length name) :fill-pointer 0 :element-type 'character :adjustable t)))
+    (with-output-to-string (s output)
+      (iterate (for c in-vector name)
+               (if (or (alphanumericp c) (member c '(#\- #\.)))
+                   (write-char c s)
+                   (progn (write-char #\_ s) (princ (char-code c) s)))))
+    output))
 
 (defun sqlquote (str)
   (with-output-to-string (s)
@@ -153,9 +156,9 @@
 
 (defun url-for-image (&rest conditions)
   (urlstring (merge-url *webserver-url*
-                          (namestring
-                           (make-pathname :type "png"
-                                          :defaults (apply #'file-name-for conditions))))))
+                        (namestring
+                         (make-pathname :type "png"
+                                        :defaults (apply #'file-name-for conditions))))))
 
 (defun emit-image-index (s &rest args &key only-release implementations &allow-other-keys)
   (let* ((benchmarks (pg-result (pg-exec *dbconn* "select distinct b_name from result order by b_name") :tuples))
@@ -168,23 +171,23 @@
 	(head (title "SBCL Benchmarks"))
 	(body
          ((div :id "sidebar")
-          ((form :method :post :action ,(urlstring *index-url*))
+          ((form :method :get :action ,(urlstring *index-url*))
            ,(make-multi-select :implementations implementations
                                (iterate (for (impl) in-relation
                                              (translate `(select (name) impl))
                                              on-connection *dbconn*)
                                         (collect `(,impl ,impl))))
            ,(make-select :only-release only-release
-                         (cons '(NIL "None")
-                         (iterate (for (version steps) in-relation
-                                       (let ((subsel `(select ((count *))
-                                                              (where (as version v2)
-                                                                     (like v2.version (|\|\|| v.version ".%"))))))
-                                         (translate `(select (version ,subsel)
-                                                             (where (as version v)
-                                                                    (> ,subsel 0))))) 
-                                       on-connection *dbconn*)
-                                  (collect `(,version ,(format nil "~A (~A)" version steps))))))
+                         (cons '(nil "None")
+                               (iterate (for (version steps) in-relation
+                                             (let ((subsel `(select ((count *))
+                                                                    (where (as version v2)
+                                                                           (like v2.version (++ v.version ".%"))))))
+                                               (translate `(select (version ,subsel)
+                                                                   (where (as version v)
+                                                                          (> ,subsel 0))))) 
+                                             on-connection *dbconn*)
+                                        (collect `(,version ,(format nil "~A (~A)" version steps))))))
            ((input :type :submit))))
          ((div :id benchmarks)
           ,@(iterate (for (benchmark) in benchmarks)
@@ -198,22 +201,37 @@
 (defun enteredp (param)
   (and param (not (equal "" param))))
 
-(defmacro body-param-bind ((&rest args) request &body body)
-  `(let (,@(loop for (arg default-value is-list) in args
-                 collect `(,arg ,(if is-list
-                                     `(mapcar #'cadr (body-params ,(symbol-name arg) (request-body ,request)))
-                                     `(body-param ,(symbol-name arg) (request-body ,request))))))
-     ,@(loop for (arg default) in args
-             collect `(unless (enteredp ,arg)
-                        (setf ,arg ,default)))
-     ,@body))
+(defmacro param-bind ((&rest args) request &body body)
+  (with-gensyms (unhandled-part params argstring)
+    `(let* ((,unhandled-part (request-unhandled-part ,request))
+            (,argstring (urlstring-unescape (subseq ,unhandled-part (mismatch ,unhandled-part "?"))))
+            (,params (print (mapcar (lambda (pp) (split-sequence:split-sequence #\= pp))
+                             (split-sequence:split-sequence #\& ,argstring))))
+            ,@(loop for (arg default-value is-list) in args
+                    collect `(,arg ,(if is-list
+                                        `(mapcar #'second
+                                                 (remove-if-not (lambda (name)
+                                                                  (string-equal name ,(symbol-name arg)))
+                                                                ,params
+                                                                :key #'first))
+                                        `(second (assoc ,(symbol-name arg) ,params :test #'string-equal))))))
+       (print ,unhandled-part)
+       (print ,argstring)
+       (print ,params)
+       ,@(loop for (arg default) in args
+               collect `(cond
+                          ((not (enteredp ,arg))
+                           (setf ,arg ,default))
+                          ((equal ,arg "NIL")
+                           (setf ,arg nil))))
+       ,@body)))
 
 (defmethod handle-request-response ((handler index-handler) method request)
-  (request-send-headers request :expires 0)
+  (request-send-headers request :expires 0) ; TODO: set this to 20 minutes (-:
   (let ((s (request-stream request)))
-    (body-param-bind ((implementations '("SBCL" "SBCL-character") t)
-                      (only-release "0.8.13.77.character")
-                      (host "beaver")) request
+    (param-bind ((implementations '("SBCL" "SBCL-character") t)
+                 (only-release nil) ; TODO: this mode should display the last CVS version's results.
+                 (host "walrus.boinkor.net")) request
         (emit-image-index s
                           :implementations implementations
                           :only-release only-release
@@ -234,9 +252,6 @@
 	      collect `((option :value ,op :selected "") ,text)
 	    else
 	      collect `((option :value ,op) ,text))))
-
-(define-condition form-value-not-entered (error)
-  ((name :accessor form-value-not-entered-name :initarg :name)))
 
 (install-handler (http-listener-handler *bench-listener*)
 		 (make-instance 'index-handler)
