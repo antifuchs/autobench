@@ -1,7 +1,8 @@
 (in-package :measure)
 
 (defclass implementation ()
-     ((version :accessor impl-version :initform nil :initarg :version)))
+     ((version :accessor impl-version :initform nil :initarg :version)
+      (name :accessor impl-name :allocation :class :initform nil)))
 
 (define-condition implementation-unbuildable ()
   ((implementation :accessor unbuildable-implementation :initarg :implementation)))
@@ -30,12 +31,21 @@ implementation can not be built."))
   directory base) in which FILE-NAME resides after IMPLEMENTATION
   is finished building."))
 
+(defgeneric next-directory (implementation directory)
+  (:documentation "Returns the directory in which the next
+version of IMPLEMENTATION can be found. It is also permitted to
+modify DIRECTORY and return it.
+
+To indicate that there is no next implementation available,
+return NIL."))
+
+(defgeneric implementation-release-date (implementation directory)
+  (:documentation "Returns the UNIVERSAL-DATE on which
+IMPLEMENTATION (source tree in DIRECTORY) was released."))
+
 ;;; Helper functions that methods in the implementation protocol may
 ;;; use and functions that our implementations may expect to be
 ;;; executed for them.
-
-(defun impl-name (impl)
-  (string-downcase (class-name (class-of impl))))
 
 (defun implementation-cached-file-name (impl file-name)
   (make-pathname :directory (append (pathname-directory *version-cache-dir*)
@@ -57,7 +67,8 @@ implementation can not be built."))
 (defmacro with-current-directory (dir &body body)
   `(unwind-protect (progn
 		     (sb-posix:chdir ,dir)
-		     ,@body)
+		     (let ((*default-pathname-defaults* ,dir))
+		       ,@body))
      (sb-posix:chdir *base-dir*)))
 
 (defun invoke-logged-program (step-name program args &key (environment (sb-ext:posix-environ)))
@@ -69,15 +80,61 @@ implementation can not be built."))
 					     step-name year month date hour minute second))
 			      *log-directory*)))
 	(ensure-directories-exist output-pathname)
-	(sb-ext:run-program program args
-			    :input nil
-			    :environment environment
-			    :output output-pathname))))
+	(let ((proc (sb-ext:run-program program args
+					:input nil
+					:environment environment
+					:output output-pathname
+                                        :if-output-exists :supersede
+                                        )))
+	  (sb-ext:process-wait proc)
+	  (when (zerop (sb-ext:process-exit-code proc))
+	    (delete-file output-pathname))
+	  (sb-ext:process-exit-code proc)))))
+
+(define-condition program-exited-abnormally ()
+  ((program :accessor failed-program :initarg :program)
+   (args :accessor failed-args :initarg :args)
+   (code :accessor failed-code :initarg :code))
+  (:report (lambda (c stream)
+	     (format stream "Program invocation ~S ~S exited abnormally with code: ~A"
+		     (failed-program c) (failed-args c) (failed-code c)))))
+
+(defmacro with-input-from-program ((stream program &rest args) &body body)
+  (with-gensyms (proc arg-list)
+    `(let* ((,arg-list (list ,@args))
+	    (,proc (sb-ext:run-program ,program ,arg-list
+				       :output :stream
+				       :input nil
+				       :error nil
+                                       :wait nil))
+	    (,stream (sb-ext:process-output ,proc)))
+       ;; XXX: the order here is wrong. body shouldn't execute before
+       ;; we have checked for successful program exit; but we can't
+       ;; wait for that until all data has been read - which is what
+       ;; the body does. argh.
+       (unwind-protect (progn ,@body)
+         ;; eat up the rest of the output
+         (when (input-stream-p ,stream)
+             (iterate (for line in-stream ,stream using #'read-line)))
+	 (sb-ext:process-wait ,proc)
+	 (unless (zerop (sb-ext:process-exit-code ,proc))
+	   (error 'program-exited-abnormally
+		  :program ,program
+		  :args ,arg-list
+		  :code (sb-ext:process-exit-code ,proc)))))))
 
 (defun ensure-implementation-file-unpacked (impl file-name)
   (when (probe-file (implementation-cached-zip-file-name impl file-name))
     (unpack-file impl file-name))
   file-name)
+
+(defmethod version-from-directory :around (impl dir)
+  (with-current-directory dir
+    (call-next-method impl dir)))
+
+(defmethod run-benchmark :around (impl)
+  (with-current-directory *cl-bench-base*
+    (call-next-method impl)))
 
 (defmethod build-in-directory :around (impl dir)
   "After a finished build, move the required files for the
@@ -89,11 +146,6 @@ implementation can not be built."))
 			    (ensure-directories-exist
 			     (implementation-cached-file-name impl file))))
       impl)))
-
-(defmethod run-benchmark (impl)
-  (with-current-directory *cl-bench-base*
-    (call-next-method impl)))
-  
 
 ;;; our own helper functions. Not really for public use.
 
@@ -113,5 +165,9 @@ implementation can not be built."))
   (declare (ignorable impl file-name))
   ;; TODO: gzip code
   nil)
+
+(defmethod print-object ((o implementation) stream)
+  (print-unreadable-object (o stream :type t)
+    (format stream "~A" (impl-version o))))
 
 ;;; arch-tag: "251ea0cc-ff5f-11d8-8b1b-000c76244c24"

@@ -3,12 +3,14 @@
 (defparameter *machines* '("walrus.boinkor.net"))
 
 ;;; FIXME: broken
-;; (defvar *conn* (pg-connect "sbclarch" "sbclarch"))
+(defvar *dbconn* (pg-connect "asf" "asf" :host nil))
 
 
 
 (defparameter *base-dir* #p"/home/asf/hack/sb-bench/")
 (setf *default-pathname-defaults* *base-dir*)
+
+(defparameter *tla-binary* #p"/usr/bin/tla")
 
 (defparameter *plot-base* (merge-pathnames #p"plot-data/" *base-dir*))
 (defparameter *cl-bench-base* (merge-pathnames #p"cl-bench/" *base-dir*))
@@ -16,7 +18,9 @@
 (defparameter *version-cache-dir* (merge-pathnames #p"+build-archive/" *base-dir*))
 (defparameter *www-base* (merge-pathnames #p"www/" *base-dir*))
 (defparameter *base-result-dir* (merge-pathnames #p"to-import/*/*.*" *base-dir*))
-(defparameter *version-translations-file* (merge-pathnames #p"version-translations.lisp" *base-dir*))
+(defparameter *version-translations-file* (merge-pathnames #p"version-translations.lisp-expr" *base-dir*))
+
+(defparameter *run-benchmark-n-times* 3)
 
 (defparameter *sbcl-build-args* '("lisp -batch"))
 

@@ -2,6 +2,11 @@
 
 (defvar *version-translations*)
 
+(defun release-p (vnum)          
+  (if (search "pre" vnum)
+      (<= (count #\. vnum) 1)
+      (<= (count #\. vnum) 2)))
+
 (defun translate-version (version)
   (let ((v (assoc version *version-translations* :test #'equal)))
     (if v
@@ -10,40 +15,48 @@
 
 (defmacro ignore-pg-errors (&rest body)
   `(handler-case (progn ,@body)
-     (pg::backend-error () nil)))
+     (pg::backend-error () nil)
+     (pg::error-response () nil)))
+
+(defun import-release-into-db (impl date)
+  (ignore-pg-errors
+   (pg-exec *dbconn* (format nil "insert into impl values ('~A', (select max(field_offset)+2 from impl))" (impl-name impl))))
+  (ignore-pg-errors
+   (pg-exec *dbconn* (format nil "insert into version values ('~A', '~A', '~A', ~A)"
+                             (impl-name impl) (impl-version impl) (net.telent.date:universal-time-to-rfc-date date)
+                             (if (release-p (impl-version impl)) "TRUE" "FALSE")))))
 
 (defun read-benchmark-data (dir machine-name)
-  (with-pg-connection (c "sbclarch" "sbclarch" :host "localhost" :password "Sahr6poh")
-    (dolist (file (directory (merge-pathnames #p"CL-benchmark*.*" dir)))
-      (with-open-file (s file :direction :input)
-	(let ((*read-eval* nil)
-	      (*version-translations* (with-open-file (f *version-translations-file*
-							 :if-does-not-exist :create
-							 :direction :input)
-					(let ((*read-eval* nil))
-					  (read f)))))
-	  (handler-case
-	      (destructuring-bind (impl version &rest benchmark) (read s :eof-error-p nil)
-		(destructuring-bind (i-name i-version) (translate-version (list impl version))
-		  (let* ((stat (sb-posix:stat file))
-			 (mtime (sb-posix::stat-mtime stat)))
-		    ;; first, make sure the benchmark exists; we don't
-		    ;; do this below, because we insert all values in
-		    ;; one transaction. benchmarks should be inserted
-		    ;; regardless of psql errors.
-		    (dolist (b benchmark)
-		      (destructuring-bind (b-name r-secs u-secs &rest ignore) b
-			(declare (ignore r-secs ignore u-secs))
-			(ignore-pg-errors
-			 (pg-exec c (format nil "insert into benchmark values ('~A')" b-name)))))
-		    (with-pg-transaction c
-		      (dolist (b benchmark)
-			(destructuring-bind (b-name r-secs u-secs &rest ignore) b
-			  (declare (ignore r-secs ignore))
+  (dolist (file (directory (merge-pathnames #p"CL-benchmark*.*" dir)))
+    (with-open-file (s file :direction :input)
+      (let ((*read-eval* nil)
+            (*version-translations* (with-open-file (f *version-translations-file*
+                                                       :if-does-not-exist :create
+                                                       :direction :input)
+                                      (let ((*read-eval* nil))
+                                        (read f)))))
+        (handler-case
+            (destructuring-bind (impl version &rest benchmark) (read s :eof-error-p nil)
+              (destructuring-bind (i-name i-version) (translate-version (list impl version))
+                (let* ((stat (sb-posix:stat file))
+                       (mtime (sb-posix::stat-mtime stat)))
+                  ;; first, make sure the benchmark exists; we don't
+                  ;; do this below, because we insert all values in
+                  ;; one transaction. benchmarks should be inserted
+                  ;; regardless of psql errors.
+                  (dolist (b benchmark)
+                    (destructuring-bind (b-name r-secs u-secs &rest ignore) b
+                      (declare (ignore r-secs ignore u-secs))
+                      (ignore-pg-errors
+                       (pg-exec *dbconn* (format nil "insert into benchmark values ('~A')" b-name)))))
+                  (with-pg-transaction *dbconn*
+                    (dolist (b benchmark)
+                      (destructuring-bind (b-name r-secs u-secs &rest ignore) b
+                        (declare (ignore r-secs ignore))
 				  
-			  (pg-exec c (format nil "insert into result values (~A::int4::abstime, '~A', '~A', '~A', '~A', ~f)"
-					     mtime i-name i-version b-name machine-name u-secs))))))))
-	    (cl:end-of-file () nil)))))))
+                        (pg-exec *dbconn* (format nil "insert into result values (~A::int4::abstime, '~A', '~A', '~A', '~A', ~f)"
+                                                  mtime i-name i-version b-name machine-name u-secs))))))))
+          (cl:end-of-file () nil))))))
 
 ;;; stand-alone stuff.
 #+(or)

@@ -132,7 +132,7 @@
     (ensure-directories-exist
      (merge-pathnames (make-pathname :name (format nil "CL-benchmark-~a-~ah~am~as" (cl:lisp-implementation-version) hour minute second))
                       ; (make-pathname :directory `(:relative :up "to-import" ,(machine-instance))))
-                      (make-pathname :directory `(:relative "to-import" ,(machine-instance))))
+                      (make-pathname :directory `(:relative "+to-import" ,(machine-instance))))
      )))
 
 ;; grr, CLISP doesn't implement ~<..~:>
