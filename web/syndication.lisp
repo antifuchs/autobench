@@ -6,12 +6,16 @@
 
 (defclass atom-handler (handler) ())
 
-(defun explain-change (benchmark impl from-revision to-revision from to)
-  `(|li| ,(format nil "runtime for benchmark ~A ~A from ~As to ~As between ~A revision ~A and ~A"
-                  benchmark (if (< from to) "increased" "decreased")
+(defun explain-change (day benchmark impl from-revision to-revision from to)
+  `(|li| ,(format nil "runtime for benchmark <a href=\"http://sbcl.boinkor.net/bench/?HOST=~A&IMPLEMENTATIONS=~A&ONLY-RELEASE=~A#~A\">~A</a> ~
+                       ~A from ~As to ~As between ~A revision ~A and ~A"
+                  "walrus.boinkor.net" ; FIXME
+                  impl (release-on-day impl day) benchmark
+                  benchmark
+                  (if (< from to) "increased" "decreased")
                   from to impl from-revision to-revision)))
 
-(defun summarize-day/benchmark (b-name v-name results)
+(defun summarize-day/benchmark (day b-name v-name results)
   (let ((first-r (first results))
         (last-r (first (last results))))
     (destructuring-bind (from-version from-sec _) first-r
@@ -19,7 +23,7 @@
       (destructuring-bind (to-version to-sec _) last-r
         (declare (ignore _))
         (when (> (abs (- to-sec from-sec)) *stddev-dev*)
-          (explain-change b-name v-name from-version to-version from-sec to-sec))))))
+          (explain-change day b-name v-name from-version to-version from-sec to-sec))))))
 
 (defun days-ago (days)
   (- (get-universal-time) (* 86400 days)))
@@ -59,7 +63,7 @@
 (defun emit-significant-changes (&rest args &key implementation host &allow-other-keys)
   (declare (ignore args))
   (multiple-value-bind (entries last-modified)
-      (iterate (for day from 1 to *go-back-days*)
+      (iterate (for day from 0 to *go-back-days*)
                (for entry =
                     (iterate (for (v-name b-name stddev) in-relation
                                    (translate
@@ -78,7 +82,7 @@
                                   on-connection *dbconn*)
                              (for day-summary =
                                   (summarize-day/benchmark
-                                   b-name v-name
+                                   day b-name v-name
                                    (pg-result
                                     (pg-exec *dbconn*
                                               (translate
