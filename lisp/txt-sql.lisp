@@ -1,10 +1,6 @@
 (in-package #:measure)
 
-(defvar *version-translations* (with-open-file (f *version-translations-file*
-						:if-does-not-exist :create
- 						:direction :input)
-                                 (let ((*read-eval* nil))
-                                   (read f))))
+(defvar *version-translations*)
 
 (defun translate-version (version)
   (let ((v (assoc version *version-translations* :test #'equal)))
@@ -20,7 +16,12 @@
   (with-pg-connection (c "sbclarch" "sbclarch" :host "localhost" :password "Sahr6poh")
     (dolist (file (directory (merge-pathnames #p"CL-benchmark*.*" dir)))
       (with-open-file (s file :direction :input)
-	(let ((*read-eval* nil))
+	(let ((*read-eval* nil)
+	      (*version-translations* (with-open-file (f *version-translations-file*
+							 :if-does-not-exist :create
+							 :direction :input)
+					(let ((*read-eval* nil))
+					  (read f)))))
 	  (handler-case
 	      (destructuring-bind (impl version &rest benchmark) (read s :eof-error-p nil)
 		(destructuring-bind (i-name i-version) (translate-version (list impl version))
@@ -41,11 +42,12 @@
 			  (declare (ignore r-secs ignore))
 				  
 			  (pg-exec c (format nil "insert into result values (~A::int4::abstime, '~A', '~A', '~A', '~A', ~f)"
-					     mtime i-name i-version b-name machine-name u-secs)))))))
-		(cl:end-of-file () nil)))))))
+					     mtime i-name i-version b-name machine-name u-secs))))))))
+	    (cl:end-of-file () nil)))))))
 
 ;;; stand-alone stuff.
-(dolist (machine-dir (remove-duplicates
+#+(or)
+ (dolist (machine-dir (remove-duplicates
 		      (mapcar (lambda (file)
 				(list (first (last (pathname-directory file)))
 				      (pathname-directory file)))

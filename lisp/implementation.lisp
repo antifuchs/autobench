@@ -11,11 +11,15 @@
 
 (defgeneric build-in-directory (implementation directory)
   (:documentation "Run the build for implementation
-IMPLEMENTATION in DIRECTORY.  Possible side-effects: If the
-method can determine (IMPL-VERSION IMPLEMENTATION), it sets the
-slot in IMPLEMENTATION to the version."))
+IMPLEMENTATION in DIRECTORY.
 
-(defgeneric run-benchmark-for-version (implementation))
+Signals a condition of type IMPLEMENTATION-UNBUILDABLE if the
+implementation can not be built.
+
+Returns a new imlementation instance with the slot VERSION set to
+the built implementation's version."))
+
+(defgeneric run-benchmark (implementation))
 
 (defgeneric implementation-required-files (implementation)
   (:documentation "Returns the names of the files required to run
@@ -26,26 +30,28 @@ slot in IMPLEMENTATION to the version."))
   directory base) in which FILE-NAME resides after IMPLEMENTATION
   is finished building."))
 
-(defgeneric implementation-runtime-file-name (implementation)
-  (:documentation "Returns the runtime file's base name for
-  IMPLEMENTATION."))
-
 ;;; Helper functions that methods in the implementation protocol may
 ;;; use and functions that our implementations may expect to be
 ;;; executed for them.
 
 (defun impl-name (impl)
-  (string-downcase (class-name impl)))
+  (string-downcase (class-name (class-of impl))))
 
 (defun implementation-cached-file-name (impl file-name)
-  (make-pathname :directory (append *version-cache-dir*
-				    (impl-version impl))
-		 :name file-name))
+  (make-pathname :directory (append (pathname-directory *version-cache-dir*)
+				    (list (impl-name impl) (impl-version impl)))
+		 :name (pathname-name file-name)))
 
-(defun ensure-implementation-file-unpacked (impl file-name)
-  (when (file-exists (implementation-cached-zip-file-name impl file-name))
-    (unpack-file impl file-name))
-  file-name)
+(defmacro with-unzipped-implementation-files (implementation &body body)
+  (with-gensyms (impl-files impl file)
+    `(let* ((,impl implementation)
+	    (,impl-files (implementation-required-files ,impl)))
+       (unwind-protect (progn
+			 (loop for ,file in ,impl-files
+			       do (ensure-implementation-file-unpacked ,impl ,file))
+			 ,@body)
+	 (loop for ,file in ,impl-files
+	       do (pack-file ,impl (implementation-cached-file-name ,impl ,file)))))))
 
 (defmethod build-in-directory :around (impl dir)
   "After a finished build, move the required files for the
@@ -56,12 +62,19 @@ slot in IMPLEMENTATION to the version."))
 			(ensure-directories-exist
 			 (implementation-cached-file-name impl file)))))
 
+(defun ensure-implementation-file-unpacked (impl file-name)
+  (when (probe-file (implementation-cached-zip-file-name impl file-name))
+    (unpack-file impl file-name))
+  file-name)
+
 ;;; our own helper functions. Not really for public use.
 
 (defun implementation-cached-zip-file-name (impl file-name)
-  (let ((pn (implementation-cached-file-name impl file-name))))
-  (setf (pathname-type pn) "gz")
-  pn)
+  (let ((pn (implementation-cached-file-name impl file-name)))
+    (make-pathname :directory (pathname-directory pn)
+		   ;; XXX: suboptimal. but I can't think of a better way right now.
+		   :name (format nil "~A~@[.~A~]" (pathname-name pn) (pathname-type pn))
+		   :type "gz")))
 
 (defun unpack-file (impl file-name)
   ;; TODO: gunzip code

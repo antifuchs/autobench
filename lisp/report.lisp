@@ -2,7 +2,7 @@
 ;;
 ;; Author: Eric Marsden  <emarsden@laas.fr>
 ;; rewritten by: Andreas Fuchs <asf@boinkor.net>
-;; Time-stamp: <2004-09-05 16:06:02 asf>
+;; Time-stamp: <2004-09-05 23:10:53 asf>
 ;;
 ;;
 ;; When loaded into SBCL, this reads files from
@@ -12,10 +12,7 @@
 
 (in-package #:measure)
 
-(defvar *latest-cvs-version* (first
-			      (pg-result (pg-exec *conn*
-						  "select version from version where release_date = (select max(release_date) from version);")
-					 :tuple 0)))
+(defvar *latest-cvs-version*)
 
 ;;; version number magic.
 
@@ -75,7 +72,11 @@
   (loop for dir in (directory (make-pathname :directory `(,@(pathname-directory *plot-base*) :wild)))
 	do (clean-up-dir dir))
   (clean-up-dir *plot-base*)
-  (let ((files (make-hash-table :test #'equal)))
+  (let ((files (make-hash-table :test #'equal))
+	(*latest-cvs-version*  (first
+				(pg-result (pg-exec *conn*
+						    "select version from version where release_date = (select max(release_date) from version);")
+					   :tuple 0))))
     (unwind-protect
 	(pg-for-each *conn* (format nil "~
                             select r1.b_name, r1.v_name, r1.v_version, avg(r1.seconds) as mean, ~
@@ -86,17 +87,17 @@
                                  left join version v2 on r1.v_version LIKE (v2.version || '.%') or v2.version LIKE (r1.v_version || '.%'), ~
                                  impl i2 ~
                             group by r1.b_name, r1.v_name, r1.v_version, v.release_date, i.field_offset order by r1.b_name, v.release_date;")
-          (lambda (tuple)
-	    (destructuring-bind (benchmark impl version mean stderr field-offset field-padding is-sub-version) tuple
-	      (declare (ignore impl))
-	      (dolist (file (ensure-files-open-for files benchmark version is-sub-version))
-		(format file "~A~A~f~A~f~A~%"
-			version
-			(make-string (1+ field-offset) :initial-element #\Tab)
-			mean
-			#\Tab
-			stderr
-			(make-string field-padding :initial-element #\Tab))))))
+		     (lambda (tuple)
+		       (destructuring-bind (benchmark impl version mean stderr field-offset field-padding is-sub-version) tuple
+			 (declare (ignore impl))
+			 (dolist (file (ensure-files-open-for files benchmark version is-sub-version))
+			   (format file "~A~A~f~A~f~A~%"
+				   version
+				   (make-string (1+ field-offset) :initial-element #\Tab)
+				   mean
+				   #\Tab
+				   stderr
+				   (make-string field-padding :initial-element #\Tab))))))
       (ensure-files-closed files))))
 
 
