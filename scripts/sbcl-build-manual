@@ -2,12 +2,14 @@
 
 ## build an sbcl manual.
 
-## call with: sbcl-build-manual DIR DESTDIR UPLOADER_NAME
+## call with: sbcl-build-manual DIR UPLOADER_NAME SBCL_BINARY SBCL_CORE
 # expects SSH_SSH_AUTH_SOCK and SSH_AGENT_PID to be set to reasonable
 # values, so auto-uploading works.
 
 DIR=$1; shift
-UPLOADER_NAME=$1
+UPLOADER_NAME=$1; shift
+SBCL_BINARY=$1; shift
+SBCL_CORE=$1;
 
 
 # first, find a usable GNU make. fortunately, sbcl provides a function
@@ -15,9 +17,11 @@ UPLOADER_NAME=$1
 . "$DIR"/find-gnumake.sh
 find_gnumake
 
+SBCL_HOME="$DIR"/contrib; export SBCL_HOME
+
 cd "$DIR"/doc/manual
 "$GNUMAKE" clean || exit 1
-"$GNUMAKE" || exit 1
+"$GNUMAKE" SBCL_SYSTEM="$SBCL_BINARY --core $SBCL_CORE" || exit 1
 rm -rf manual || true
 cp -Rp sbcl manual
 

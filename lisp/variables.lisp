@@ -10,10 +10,19 @@ Usage is analogous to that of ECASE."
 
 
 ;;; Connection to the SB-BENCH database
-(defvar *dbconn* (pg-connect "asf" "asf" :host nil))
+(defvar *dbconn* (pg-connect
+                  (machine-ecase
+                   ("walrus.boinkor.net" "sbcl-arch")
+                   ("beaver" "asf"))
+                  (machine-ecase
+                   ("walrus.boinkor.net" "sbcl-arch")
+                   ("beaver" "asf"))
+                  :host nil))
 
 ;;; base directory of the sb-bench installation
-(defparameter *base-dir* #p"/home/asf/hack/sb-bench/")
+(defparameter *base-dir* (machine-ecase
+                          ("walrus.boinkor.net" #p"/home/sbcl-arch/autobench/")
+                          ("beaver" #p"/home/asf/hack/sb-bench/")))
 
 ;;; Machine-dependent stuff
 (defparameter *unpack-binary* (machine-ecase

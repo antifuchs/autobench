@@ -75,10 +75,13 @@
   ;; TODO: send mail. No idea how to do that, yet
   (format t "Would have sent mail to ~s with subject ~S~%" address subject))
 
-(defun build-manual (dir)
-  (invoke-logged-program "sbcl-build-manual" (namestring (merge-pathnames #p"scripts/sbcl-build-manual" *base-dir*))
-                         `(,(namestring dir) ,(namestring *www-base*) "antifuchs")
-                         :environment `(,@(prepare-sbcl-environment))))
+(defun build-manual (impl dir)
+  (with-unzipped-implementation-files impl
+    (invoke-logged-program "sbcl-build-manual" (namestring (merge-pathnames #p"scripts/sbcl-build-manual" *base-dir*))
+                           `(,(namestring dir) "antifuchs"
+                             ,@(mapcar (lambda (f) (namestring (implementation-cached-file-name impl f)))
+                                       (implementation-required-files impl)))
+                           :environment `(,@(prepare-sbcl-environment)))))
 
 (defmethod build-in-directory :around ((impl sbcl) dir)
   "If this is the last revision, build the manual and report a
@@ -86,7 +89,7 @@ possible build failure to *SBCL-DEVELOPERS*."
   (if (and (last-version-p dir)
            (equalp "walrus.boinkor.net" (machine-instance))) ;; only makes sense on walrus
       (handler-case (progn (call-next-method impl dir)
-                           (build-manual dir))
+                           (build-manual impl dir))
         (implementation-unbuildable (e)
           (send-mail-to *sbcl-developers* (format nil "Can't build ~A" (unbuildable-implementation e))))
         (program-exited-abnormally (e)
