@@ -84,7 +84,7 @@ return NIL."))
 		     (sb-posix:chdir ,dir)
 		     (let ((*default-pathname-defaults* ,dir))
 		       ,@body))
-     (sb-posix:chdir *base-dir*)))
+     (sb-posix:chdir *default-pathname-defaults*)))
 
 (define-condition program-exited-abnormally ()
   ((program :accessor failed-program :initarg :program)

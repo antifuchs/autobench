@@ -30,6 +30,8 @@ Usage is analogous to that of ECASE."
                             ("walrus.boinkor.net" "/usr/local/bin/tla")
                             ("beaver" #p"/usr/bin/tla")))
 
+(defparameter *tar-binary* #p"/usr/bin/tar")
+
 (defparameter *run-benchmark-n-times* 3
   "The number of times each version should be benchmarked.
 To get any useful information on variance between benchmark runs,
@@ -39,6 +41,8 @@ this should be >=3.")
   "The program that the SBCL build should use as a host compiler.
 For improved compilation speed, I recommend using CMUCL 18e (-:")
 
+
+(defparameter *cmucl-snapshot-format* "cmucl-~A-~A-x86-FreeBSD.tar.bz2")
 ;;; pathnames
 (defparameter *cl-bench-base* (merge-pathnames #p"cl-bench/" *base-dir*))
 (defparameter *log-directory* (merge-pathnames #p"+log/" *base-dir*))
