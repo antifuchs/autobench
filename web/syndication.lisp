@@ -32,7 +32,9 @@
                     (if (< from to) "+" "-") percentage))))
 
 (defun days-ago (days)
-  (- (get-universal-time) (* 86400 (1- days))))
+  (- (get-universal-time) (* 86400
+                             (- days 2) ; for planet.lisp.org
+                             )))
 
 (defun format-atom-decoded-time (&optional (days 0) (minute-as-version 0))
   (multiple-value-bind (second minute hour date month year day daylight-p zone) (decode-universal-time (days-ago days))
