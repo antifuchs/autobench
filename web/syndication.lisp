@@ -1,6 +1,6 @@
 (in-package :autobench-web)
 
-(defparameter *bugfix-revision* 4)
+(defparameter *bugfix-revision* 5)
 
 (defparameter *go-back-days* 50)
 (defparameter *ignore-benchmarks* '(quote ("MAKE-LIST-SEQUENTIAL/RPLACD" "MAKE-LIST-SEQUENTIAL/PUSH-NREVERSE" "CRC40")))
@@ -32,7 +32,7 @@
                     (if (< from to) "+" "-") percentage))))
 
 (defun days-ago (days)
-  (- (get-universal-time) (* 86400 days)))
+  (- (get-universal-time) (* 86400 (1- days))))
 
 (defun format-atom-decoded-time (&optional (days 0) (minute-as-version 0))
   (multiple-value-bind (second minute hour date month year day daylight-p zone) (decode-universal-time (days-ago days))
@@ -89,9 +89,9 @@
                  (next-iteration)) ; skip until we are two days ahead.
                (for entry =
                     (iterate entry-loop
-                             (for (version) in-relation
+                             (for (version release-p release-date) in-relation
                                   (translate
-                                   `(select (version)
+                                   `(select (version is-release release-date)
                                             (order-by
                                              (where version
                                                    (and
@@ -116,6 +116,21 @@
                                                                                     (- (to_universal_time "today") (* 86400 ,p-day)))))
                                                                    (release-date) :desc))))
                                                :tuple 0)))
+                             (when release-p ; compare releases to each other.
+                               (setf p-version
+                                     (first
+                                      (pg-result
+                                       (pg-exec *dbconn*
+                                                (translate
+                                                 `(select (version)
+                                                          (order-by
+                                                           (where version
+                                                                  (and
+                                                                   (= i-name ,implementation)
+                                                                   (< release-date ,release-date)
+                                                                   is-release))
+                                                           (release-date) :desc))))
+                                       :tuple 0))))
                              (for impl-entry =
                                   (iterate (for (b-name t-avg y-avg t-err y-err) in-relation
                                                 (translate
@@ -170,7 +185,8 @@
                        ((|content| |type| "application/xhtml+xml" |mode| "xml" |xml:base| "http://sbcl.boinkor.net/bench/")
                         ((|div| |xmlns| "http://www.w3.org/1999/xhtml")
                          (|ul|
-                          ,@entry))))
+                          ,@(reverse entry) ; get newest entries first
+                          ))))
                    into entries)
                  (minimizing day into days))
                (finally (return (values entries days))))
