@@ -79,8 +79,7 @@
            (collect day-nr)))
 
 (defun make-1-entry (day p-day pp-day &key implementation host &allow-other-keys)
-  (iterate entry-loop
-           (for (version release-p release-date) in-relation
+  (iterate (for (version release-p release-date) in-relation
                 (translate
                  `(select (version is-release release-date)
                           (order-by
@@ -162,7 +161,7 @@
                              (|ul| 
                               ,@impl-entry))
                into entry-list))
-           (finally (return-from entry-loop (values first-version last-version entry-list)))))
+           (finally (return-from make-1-entry (values first-version last-version entry-list)))))
 
 (defun collect-entries (&rest args &key implementation host &allow-other-keys)
   (iterate (for day in (days-with-revisions *go-back-days*))
