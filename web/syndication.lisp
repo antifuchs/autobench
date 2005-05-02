@@ -1,6 +1,6 @@
 (in-package :autobench-web)
 
-(defparameter *bugfix-revision* 5)
+(defparameter *bugfix-revision* 6)
 
 (defparameter *go-back-days* 50)
 (defparameter *ignore-benchmarks* '(quote ("MAKE-LIST-SEQUENTIAL/RPLACD" "MAKE-LIST-SEQUENTIAL/PUSH-NREVERSE" "CRC40")))
@@ -78,131 +78,139 @@
                 on-connection *dbconn*)
            (collect day-nr)))
 
+(defun collect-entries (&key implementation host &allow-other-keys)
+  (iterate (for day in (days-with-revisions *go-back-days*))
+           ;; XXX: this is slightly weird. p-day the day before
+           ;; yesterday or the previous day through the loop?
+           ;; here, it's the previous day throught the loop.
+           (for p-day previous day initially nil)
+           (for pp-day previous p-day initially nil)
+           (when (null pp-day)
+             (next-iteration))     ; skip until we are two days ahead.
+           (for (values first-version last-version entry) =
+                (iterate entry-loop
+                         (for (version release-p release-date) in-relation
+                              (translate
+                               `(select (version is-release release-date)
+                                        (order-by
+                                         (where version
+                                                (and
+                                                 (= i-name ,implementation)
+                                                 (between release_date
+                                                          (- (to_universal_time "today") (* 86400 ,p-day))
+                                                          (- (to_universal_time "today") (* 86400 ,pp-day)))))
+                                         (release-date))))
+                              on-connection *dbconn*)
+                         (finding version maximizing release-date into last-version)
+                         (finding version minimizing release-date into first-version)
+                         (for p-version previous version
+                              initially (first
+                                         (pg-result
+                                          (pg-exec *dbconn*
+                                                   (translate
+                                                    `(select (version)
+                                                             (order-by
+                                                              (where version
+                                                                     (and
+                                                                      (= i-name ,implementation)
+                                                                      (between release_date
+                                                                               (- (to_universal_time "today") (* 86400 ,day))
+                                                                               (- (to_universal_time "today") (* 86400 ,p-day)))))
+                                                              (release-date) :desc))))
+                                          :tuple 0)))
+                         (when release-p ; compare releases to each other.
+                           (setf p-version
+                                 (first
+                                  (pg-result
+                                   (pg-exec *dbconn*
+                                            (translate
+                                             `(select (version)
+                                                      (order-by
+                                                       (where version
+                                                              (and
+                                                               (= i-name ,implementation)
+                                                               (< release-date ,release-date)
+                                                               is-release))
+                                                       (release-date) :desc))))
+                                   :tuple 0))))
+                         (for impl-entry =
+                              (iterate (for (b-name t-avg y-avg t-err y-err) in-relation
+                                            (translate
+                                             ;; terminology: "y" = yesterday,
+                                             ;; "t" = today (which is a lie,
+                                             ;; because this program's yesterday
+                                             ;; is "the last day on which there
+                                             ;; was a commit")
+                                             `(select (t.b-name (avg t.seconds) (avg y.seconds)
+                                                                (/ (stddev t.seconds) (sqrt (count t.seconds)))
+                                                                (/ (stddev y.seconds) (sqrt (count y.seconds))))
+                                                      (having
+                                                       (group-by (where (join (as result t)
+                                                                              (as result y)
+                                                                              :on (and (= t.v-name y.v-name) (= t.b-name y.b-name)
+                                                                                       (= t.m-name y.m-name)))
+                                                                        (and
+                                                                         (= t.v_version ,version)
+                                                                         (= y.v_version ,p-version)
+                                                                         (not (in t.b-name ,*ignore-benchmarks*))
+                                                                         (= t.v_name ,implementation)
+                                                                         (= t.m_name ,host)))
+                                                                 (t.b-name))
+                                                       (and
+                                                        (> (abs (- (avg t.seconds) (avg y.seconds)))
+                                                           (* 0.05 (avg y.seconds)))
+                                                        (> (abs (- (avg t.seconds) (avg y.seconds)))
+                                                           (* 3 (sqrt (+ (* (/ (stddev t.seconds) (sqrt (count t.seconds)))
+                                                                            (/ (stddev t.seconds) (sqrt (count t.seconds))))
+                                                                         (* (/ (stddev y.seconds) (sqrt (count y.seconds)))
+                                                                            (/ (stddev y.seconds) (sqrt (count y.seconds))))))))))))
+                                            on-connection *dbconn*)
+                                       (collect (summarize-day/benchmark pp-day b-name implementation y-avg t-avg y-err t-err))))
+                         (when impl-entry
+                           (collect `(|li| "from " ,implementation " revision " ,p-version " to " ,version ":"
+                                           (|ul| 
+                                            ,@impl-entry))
+                             into entry-list))
+                         (finally (return-from entry-loop (values first-version last-version entry-list)))))
+           (collect
+               `(|entry|
+                 (|title| "Benchmark results for " ,(format-readable-decoded-time day))
+                 ((|link| |rel| "alternate" |type| "text/html"
+                          |href| ,(html-escape (format nil "http://sbcl.boinkor.net/bench/?HOST=~A&IMPLEMENTATIONS=~A&ONLY-RELEASE=~A"
+                                                       host implementation (release-on-day implementation day)))))
+                 (|modified| ,(format-atom-decoded-time day *bugfix-revision*))
+                 (|issued| ,(format-atom-decoded-time day))
+                 (|id| ,(format nil "tag:sbcl.boinkor.net,~A:/bench/~A" (format-readable-decoded-time day) implementation))
+                 (|created| ,(format-atom-decoded-time day))
+                 (|author|
+                  (|name| ,(format nil "~A Benchmark runner on ~A" implementation host))
+                  (|email| "sbcl-arch@boinkor.net"))
+                 ((|content| |type| "application/xhtml+xml" |mode| "xml" |xml:base| "http://sbcl.boinkor.net/bench/")
+                  ((|div| |xmlns| "http://www.w3.org/1999/xhtml")
+                   ,(if entry
+                        `(|p| "Last tested version: " ,last-version ". Significant changes:")
+                        `(|p| "Benchmarked versions " ,first-version " through " ,last-version ", but there were no significant changes."))
+                   (|ul|
+                    ,@(when entry
+                        (reverse entry)) ; get newest entries first
+                    ))))
+             into entries)                 
+           (minimizing day into days)
+           (finally (return (values entries days)))))
+
 (defun emit-significant-changes (&rest args &key implementation host &allow-other-keys)
-  (declare (ignore args))
-  (multiple-value-bind (entries last-modified)
-      (iterate (for day in (days-with-revisions *go-back-days*))
-               ;; XXX: this is slightly weird. p-day the day before
-               ;; yesterday or the previous day through the loop?
-               ;; here, it's the previous day throught the loop.
-               (for p-day previous day initially nil)
-               (for pp-day previous p-day initially nil)
-               (when (or (null pp-day))
-                 (next-iteration)) ; skip until we are two days ahead.
-               (for entry =
-                    (iterate entry-loop
-                             (for (version release-p release-date) in-relation
-                                  (translate
-                                   `(select (version is-release release-date)
-                                            (order-by
-                                             (where version
-                                                   (and
-                                                    (= i-name ,implementation)
-                                                    (between release_date
-                                                            (- (to_universal_time "today") (* 86400 ,p-day))
-                                                            (- (to_universal_time "today") (* 86400 ,pp-day)))))
-                                             (release-date))))
-                                  on-connection *dbconn*)
-                             (for p-version previous version
-                                  initially (first
-                                              (pg-result
-                                               (pg-exec *dbconn*
-                                                        (translate
-                                                         `(select (version)
-                                                                  (order-by
-                                                                   (where version
-                                                                          (and
-                                                                           (= i-name ,implementation)
-                                                                           (between release_date
-                                                                                    (- (to_universal_time "today") (* 86400 ,day))
-                                                                                    (- (to_universal_time "today") (* 86400 ,p-day)))))
-                                                                   (release-date) :desc))))
-                                               :tuple 0)))
-                             (when release-p ; compare releases to each other.
-                               (setf p-version
-                                     (first
-                                      (pg-result
-                                       (pg-exec *dbconn*
-                                                (translate
-                                                 `(select (version)
-                                                          (order-by
-                                                           (where version
-                                                                  (and
-                                                                   (= i-name ,implementation)
-                                                                   (< release-date ,release-date)
-                                                                   is-release))
-                                                           (release-date) :desc))))
-                                       :tuple 0))))
-                             (for impl-entry =
-                                  (iterate (for (b-name t-avg y-avg t-err y-err) in-relation
-                                                (translate
-                                                 ;; terminology: "y" = yesterday,
-                                                 ;; "t" = today (which is a lie,
-                                                 ;; because this program's yesterday
-                                                 ;; is "the last day on which there
-                                                 ;; was a commit")
-                                                 `(select (t.b-name (avg t.seconds) (avg y.seconds)
-                                                                    (/ (stddev t.seconds) (sqrt (count t.seconds)))
-                                                                    (/ (stddev y.seconds) (sqrt (count y.seconds))))
-                                                          (having
-                                                           (group-by (where (join (as result t)
-                                                                                  (as result y)
-                                                                                  :on (and (= t.v-name y.v-name) (= t.b-name y.b-name)
-                                                                                           (= t.m-name y.m-name)))
-                                                                            (and
-                                                                             (= t.v_version ,version)
-                                                                             (= y.v_version ,p-version)
-                                                                             (not (in t.b-name ,*ignore-benchmarks*))
-                                                                             (= t.v_name ,implementation)
-                                                                             (= t.m_name ,host)))
-                                                                     (t.b-name))
-                                                           (and
-                                                            (> (abs (- (avg t.seconds) (avg y.seconds)))
-                                                               (* 0.05 (avg y.seconds)))
-                                                            (> (abs (- (avg t.seconds) (avg y.seconds)))
-                                                               (* 3 (sqrt (+ (* (/ (stddev t.seconds) (sqrt (count t.seconds)))
-                                                                                (/ (stddev t.seconds) (sqrt (count t.seconds))))
-                                                                             (* (/ (stddev y.seconds) (sqrt (count y.seconds)))
-                                                                                (/ (stddev y.seconds) (sqrt (count y.seconds))))))))))))
-                                                on-connection *dbconn*)
-                                           (collect (summarize-day/benchmark pp-day b-name implementation y-avg t-avg y-err t-err))))
-                             (when impl-entry
-                               (collect `(|li| "from " ,implementation " revision " ,p-version " to " ,version ":"
-                                               (|ul| 
-                                                ,@impl-entry))))))
-               (when entry
-                 (collect
-                     `(|entry|
-                       (|title| "Benchmark results for " ,(format-readable-decoded-time day))
-                       ((|link| |rel| "alternate" |type| "text/html"
-                                |href| ,(html-escape (format nil "http://sbcl.boinkor.net/bench/?HOST=~A&IMPLEMENTATIONS=~A&ONLY-RELEASE=~A"
-                                                host implementation (release-on-day implementation day)))))
-                       (|modified| ,(format-atom-decoded-time day *bugfix-revision*))
-                       (|issued| ,(format-atom-decoded-time day))
-                       (|id| ,(format nil "tag:sbcl.boinkor.net,~A:/bench/~A" (format-readable-decoded-time day) implementation))
-                       (|created| ,(format-atom-decoded-time day))
-                       (|author|
-                        (|name| ,(format nil "~A Benchmark runner on ~A" implementation host))
-                        (|email| "sbcl-arch@boinkor.net"))
-                       ((|content| |type| "application/xhtml+xml" |mode| "xml" |xml:base| "http://sbcl.boinkor.net/bench/")
-                        ((|div| |xmlns| "http://www.w3.org/1999/xhtml")
-                         (|ul|
-                          ,@(reverse entry) ; get newest entries first
-                          ))))
-                   into entries)
-                 (minimizing day into days))
-               (finally (return (values entries days))))
-  `((|feed| |version| "0.3"
-            |xmlns| "http://purl.org/atom/ns#"
-            |xmlns:dc| "http://purl.org/dc/elements/1.1/"
-            |xml:lang| "en")
-    (|title| ,(format nil "Significant changes in SBCL benchmark results on ~A" host))
-    (|modified| ,(format-atom-decoded-time last-modified *bugfix-revision*))
-    (|id| ,(format nil "tag:sbcl.boinkor.net,~A:/bench/~A" (nth-value 5 (get-decoded-time)) implementation))
-    ((|link| |rel| "alternate"
-             |type| "text/html"
-             |href| "http://sbcl.boinkor.net/bench/"))
-    ,@entries)))
+  (multiple-value-bind (entries last-modified) (apply #'collect-entries args)
+    `((|feed| |version| "0.3"
+              |xmlns| "http://purl.org/atom/ns#"
+              |xmlns:dc| "http://purl.org/dc/elements/1.1/"
+              |xml:lang| "en")
+      (|title| ,(format nil "Significant changes in SBCL benchmark results on ~A" host))
+      (|modified| ,(format-atom-decoded-time last-modified *bugfix-revision*))
+      (|id| ,(format nil "tag:sbcl.boinkor.net,~A:/bench/~A" (nth-value 5 (get-decoded-time)) implementation))
+      ((|link| |rel| "alternate"
+               |type| "text/html"
+               |href| "http://sbcl.boinkor.net/bench/"))
+      ,@entries)))
 
 (defmethod handle-request-response ((handler atom-handler) method request)
   (let ((*latest-result* (first (pg-result (pg-exec *dbconn* "select max(date) from result") :tuple 0))))
