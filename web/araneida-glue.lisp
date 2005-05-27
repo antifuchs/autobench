@@ -46,12 +46,12 @@
 
 (defun last-version ()
   (second (pg-result (pg-exec *dbconn*
-                              (translate `(select (i_name version)
-                                                  (limit
-                                                   (order-by version
-                                                             (release_date)
-                                                             :desc)
-                                                   :start 0 :end 1))))
+                              (translate* `(select (i_name version)
+                                                   (limit
+                                                    (order-by version
+                                                              (release_date)
+                                                              :desc)
+                                                    :start 0 :end 1))))
                      :tuple 0)))
 
 (defun filesys-escape-name (name)
@@ -88,7 +88,7 @@
                  :name (filesys-escape-name benchmark)))
 
 (defun generate-image-for (&rest conditions &key unit &allow-other-keys)
-  (let ((max-offset (first (pg-result (pg-exec *dbconn* (translate `(select ((max i.field_offset))
+  (let ((max-offset (first (pg-result (pg-exec *dbconn* (translate* `(select ((max i.field_offset))
                                                                              ,(apply #'emit-where-clause conditions))))
                                                :tuple 0)))
         (filename (merge-pathnames (apply #'file-name-for conditions) *prefab-base*)))
@@ -96,12 +96,12 @@
     (with-open-file (f (ensure-directories-exist filename) :direction :output
                        :if-exists :supersede :if-does-not-exist :create)
       (iterate (for (date name version offset mean stderr) in-relation
-                    (translate `(select (v.release-date v.i-name v.version i.field-offset
-                                                        (avg r.seconds) (/ (stddev r.seconds) (sqrt (count r.seconds))))
-                                        (order-by
-                                         (group-by ,(apply #'emit-where-clause conditions)
-                                                   (v.release-date v.i-name v.version i.field-offset))
-                                         (v.release-date))))
+                    (translate* `(select (v.release-date v.i-name v.version i.field-offset
+                                                         (avg r.seconds) (/ (stddev r.seconds) (sqrt (count r.seconds))))
+                                         (order-by
+                                          (group-by ,(apply #'emit-where-clause conditions)
+                                                    (v.release-date v.i-name v.version i.field-offset))
+                                          (v.release-date))))
                     on-connection *dbconn*)
                (format f "~A~A~f~A~f~A~%"
                        version
@@ -118,15 +118,15 @@
                                                "ynearest=5" ; used to be 0.5. now ploticus doesn't scale according to the second column. TODO?
                                                "stubvert=yes"
                                                ,@(iterate (for (impl offset) in-relation
-                                                               (translate `(select (name field-offset)
-                                                                                   (order-by (alias
-                                                                                              (distinct
-                                                                                               (select (i.name field-offset)
-                                                                                                       (order-by
-                                                                                                        ,(apply #'emit-where-clause conditions)
-                                                                                                        (i.name))))
-                                                                                              raw)
-                                                                                             (field-offset))))
+                                                               (translate* `(select (name field-offset)
+                                                                                    (order-by (alias
+                                                                                               (distinct
+                                                                                                (select (i.name field-offset)
+                                                                                                        (order-by
+                                                                                                         ,(apply #'emit-where-clause conditions)
+                                                                                                         (i.name))))
+                                                                                               raw)
+                                                                                              (field-offset))))
                                                                on-connection *dbconn*)
                                                           (for pl-s = (if (= offset 0) "" (1+ (/ offset 2))))
                                                           ;; "name=SBCL" "y=2" "err=3" "name2=CMU Common Lisp" "y2=4" "err2=5"
@@ -157,13 +157,13 @@
   (declare (ignore conditions))
   (pg-result
    (pg-exec *dbconn*
-            (translate `(select ((min release-date) (max release-date))
-                                (where (join version result
-                                             :on (and (= result.v-name version.i-name) (= v-version version)))
-                                       (and (= m-name ,host)
-                                            ,(if only-release
-                                                 `(like version (++ ,only-release ".%"))
-                                                 t))))))
+            (translate* `(select ((min release-date) (max release-date))
+                                 (where (join version result
+                                              :on (and (= result.v-name version.i-name) (= v-version version)))
+                                        (and (= m-name ,host)
+                                             ,(if only-release
+                                                  `(like version (++ ,only-release ".%"))
+                                                  t))))))
    :tuple 0))
 
 (defun emit-image-index (s &rest args &key host only-release implementations &allow-other-keys)
@@ -193,7 +193,7 @@
            (h2 "Machine")
            (ul
             ,@(iterate (for (machine) in-relation
-                            (translate `(distinct (select (m_name) result)))
+                            (translate* `(distinct (select (m_name) result)))
                             on-connection *dbconn*)
                        (collect `(li ((a :href ,(format nil "~A?host=~A" (urlstring *index-url*) machine)
                                          ,@(if (equal host machine)
@@ -203,7 +203,7 @@
            (h2 "Version")
            ,(make-multi-select :implementations implementations
                                (iterate (for (impl) in-relation
-                                             (translate `(select (name) impl))
+                                             (translate* `(select (name) impl))
                                              on-connection *dbconn*)
                                         (collect `(,impl ,impl))))
            (h2 "Release")
@@ -213,8 +213,8 @@
                                              (let ((subsel `(select ((count *))
                                                                     (where (as version v2)
                                                                            (like v2.version (++ v.version ".%"))))))
-                                               (translate `(select (version ,subsel)
-                                                                   (where (as version v)
+                                               (translate* `(select (version ,subsel)
+                                                                    (where (as version v)
                                                                            (> ,subsel 0)))))
                                              on-connection *dbconn*)
                                         (collect `(,version ,(format nil "~A (~A)" version steps))))))

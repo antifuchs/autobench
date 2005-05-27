@@ -52,7 +52,7 @@
   (first
    (pg-result
     (pg-exec *dbconn*
-             (translate
+             (translate*
               `(limit (select (version)
                               (order-by
                                (where version
@@ -80,7 +80,7 @@
 
 (defun make-1-entry (day p-day pp-day &key implementation host &allow-other-keys)
   (iterate (for (version release-p release-date) in-relation
-                (translate
+                (translate*
                  `(select (version is-release release-date)
                           (order-by
                            (where version
@@ -97,7 +97,7 @@
                 initially (first
                            (pg-result
                             (pg-exec *dbconn*
-                                     (translate
+                                     (translate*
                                       `(select (version)
                                                (order-by
                                                 (where version
@@ -113,7 +113,7 @@
                    (first
                     (pg-result
                      (pg-exec *dbconn*
-                              (translate
+                              (translate*
                                `(select (version)
                                         (order-by
                                          (where version
@@ -125,7 +125,7 @@
                      :tuple 0))))
            (for impl-entry =
                 (iterate (for (b-name t-avg y-avg t-err y-err) in-relation
-                              (translate
+                              (translate*
                                ;; terminology: "y" = yesterday,
                                ;; "t" = today (which is a lie,
                                ;; because this program's yesterday
