@@ -70,7 +70,7 @@
 
 (defun days-with-revisions (days-back)
   (iterate (for (day-nr) in-relation
-                (format nil "select distinct to_universal_time('today')/86400::integer - release_date/86400::integer as day ~
+                (format nil "select distinct (to_universal_time('today') - release_date)/86400::integer as day ~
                              from version ~
                              where release_date between to_universal_time('today')- 86400*~A and to_universal_time('today') ~
                              order by day;"
@@ -160,7 +160,7 @@
              (collect `(|li| "from " ,implementation " revision " ,p-version " to " ,version ":"
                              (|ul| 
                               ,@impl-entry))
-               into entry-list))
+                      into entry-list))
            (finally (return-from make-1-entry (values first-version last-version entry-list)))))
 
 (defun collect-entries (&rest args &key implementation host &allow-other-keys)

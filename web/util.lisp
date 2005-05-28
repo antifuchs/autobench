@@ -1,6 +1,8 @@
 (in-package :autobench-web)
 
-(defparameter *debugging* nil)
+(defparameter *debugging* (autobench::machine-ecase
+                           ("walrus.boinkor.net" nil)
+                           ("beaver" t)))
 
 (defun translate* (sexql)
   (let ((sql (translate sexql)))

@@ -1,9 +1,9 @@
 (in-package :autobench-web)
 
 (defparameter *site-name* "beaver.boinkor.net")
-(defparameter *dbconn* (pg-connect "asf" "asf" :host nil))
+(defparameter *dbconn* (pg-connect "asf" "asf"))
 
-(defparameter *prefab-base* #p"/home/asf/hack/sb-bench/+prefab/")
+(defparameter *prefab-base* #p"/home/asf/hack/autobench/+prefab/")
 (defparameter *ploticus-binary* "/usr/bin/ploticus")
 
 
