@@ -1,6 +1,6 @@
 (in-package :autobench-web)
 
-(defparameter *bugfix-revision* 6)
+(defparameter *bugfix-revision* 7)
 
 (defparameter *go-back-days* 50)
 (defparameter *ignore-benchmarks* '(quote ("MAKE-LIST-SEQUENTIAL/RPLACD" "MAKE-LIST-SEQUENTIAL/PUSH-NREVERSE" "CRC40")))
@@ -37,7 +37,7 @@
                              )))
 
 (defun format-atom-decoded-time (&optional (days 0) (minute-as-version 0))
-  (multiple-value-bind (second minute hour date month year day daylight-p zone) (decode-universal-time (days-ago days))
+  (multiple-value-bind (second minute hour date month year day daylight-p zone) (decode-universal-time (days-ago (1- days)))
     (declare (ignore day hour minute second daylight-p zone))
     (format nil "~4,1,0,'0@A-~2,1,0,'0@A-~2,1,0,'0@AT~2,1,0,'0@A:~2,1,0,'0@A:~2,1,0,'0@AZ"
             year month date 0 minute-as-version 0)))
@@ -170,6 +170,7 @@
            ;; here, it's the previous day throught the loop.
            (for p-day previous day initially nil)
            (for pp-day previous p-day initially nil)
+
            (when (null pp-day)
              (next-iteration))     ; skip until we are two days ahead.
            (for (values first-version last-version entry) =
