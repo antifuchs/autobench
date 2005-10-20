@@ -8,3 +8,8 @@
 
 * <Xophe> antifuchs: another (more blue-sky TODO): an option to plot the x-axis by date rather than by version increment
 
+* <delYsid> antifuchs: Now that I "see" this, boinkmarks is completely inaccessible.  Can you add useable alt tags to your html?
+  <Xof> alt="[graph]"
+  <delYsid> Xof: no, the hard data...
+  <antifuchs> delYsid: what should be in the alt tag? the data points (seconds & standard error) for every revision in the graph?
+  <delYsid> Actually, a LINK to a file listing them :)

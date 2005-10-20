@@ -12,23 +12,28 @@ Usage is analogous to that of ECASE."
 ;;; Connection to the SB-BENCH database
 (defvar *dbconn* (machine-ecase
                    ("walrus.boinkor.net" (pg-connect "sbcl-arch" "sbcl-arch"))
-                   ("beaver" (pg-connect "asf" "asf"))))
+                   ("beaver" (pg-connect "asf" "asf"))
+                   ("baker" (pg-connect "sbcl-arch" "sbcl-arch"))))
 
 ;;; base directory of the sb-bench installation
 (defparameter *base-dir* (machine-ecase
                           ("walrus.boinkor.net" #p"/home/sbcl-arch/autobench/")
-                          ("beaver" #p"/home/asf/hack/sb-bench/")))
+                          ("beaver" #p"/home/asf/hack/sb-bench/")
+                          ("baker" #p"/home/sbcl-arch/autobench/")))
 
 ;;; Machine-dependent stuff
 (defparameter *unpack-binary* (machine-ecase
                                 ("walrus.boinkor.net" "/usr/bin/gunzip") ; FreeBSD
-                                ("beaver" "/bin/gunzip")))               ; Linux
+                                ("beaver" "/bin/gunzip")
+                                ("baker" "/bin/gunzip")))               ; Linux
 (defparameter *pack-binary* (machine-ecase
                                 ("walrus.boinkor.net" "/usr/bin/gzip") 
-                                ("beaver" "/bin/gzip")))
+                                ("beaver" "/bin/gzip")
+                                ("baker" "/bin/gzip")))
 (defparameter *tla-binary* (machine-ecase
                             ("walrus.boinkor.net" "/usr/local/bin/tla")
-                            ("beaver" #p"/usr/bin/tla")))
+                            ("beaver" #p"/usr/bin/tla")
+                            ("baker" #p"/usr/bin/baz")))
 
 (defparameter *tar-binary* #p"/usr/bin/tar")
 
