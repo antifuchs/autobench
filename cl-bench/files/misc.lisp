@@ -1,6 +1,6 @@
 ;;; misc.lisp
 ;;;
-;;; Time-stamp: <2004-03-14 14:41:42 asf>
+;;; Time-stamp: <2005-11-13 11:01:20 asf>
 
 
 (in-package :cl-bench.misc)
@@ -209,16 +209,9 @@
 
 ;;; Core file size test - this is an ugly hack. Only for boinkmarks
 
-(defun find-core-file-name (posix-args core-arg)
-  (loop for args on posix-args
-	when (string-equal (first args) core-arg)
-	  return (second args)))
-
 (defun core-file-size ()
-  (let ((core-file-name (find-core-file-name #+sbcl sb-ext:*posix-argv*
-					     #+cmu ext:*command-line-strings*
-					     #-(or sbcl cmu) nil
-					     "--boink-core-file")))
+  (let ((core-file-name (cl-bench:find-program-argument-value (cl-bench:program-invocation-arguments)
+                                                              "--boink-core-file")))
     (if core-file-name
 	(with-open-file (f core-file-name :direction :input
 			   :element-type '(unsigned-byte 8))

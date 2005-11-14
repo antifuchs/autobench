@@ -5,8 +5,6 @@
 (defparameter *go-back-days* 50)
 (defparameter *ignore-benchmarks* '(quote ("MAKE-LIST-SEQUENTIAL/RPLACD" "MAKE-LIST-SEQUENTIAL/PUSH-NREVERSE" "CRC40")))
 
-(defclass atom-handler (handler) ())
-
 (defun digits-format-string (avg stderr)
   (let ((post-dec (if (zerop stderr)
                       1
@@ -15,14 +13,13 @@
           1
           post-dec)))
 
-(defun summarize-day/benchmark (day benchmark impl from to f-err t-err)
+(defun summarize-day/benchmark (day benchmark impl host from to f-err t-err)
   (let ((percentage (round (* 100 (/ (abs (- to from))
                                     (max from to))))))
     `(|li| ,(format nil "Run time for benchmark <a href=\"~A\">~A</a> ~
                        ~A from (~@? &#xb1; ~@?)s to (~@? &#xb1; ~@?)s (~A~A%)" 
                     (html-escape (format nil "http://sbcl.boinkor.net/bench/?HOST=~A&IMPLEMENTATIONS=~A&ONLY-RELEASE=~A#~A"
-                                         "walrus.boinkor.net" ; FIXME
-                                         impl (release-on-day impl day) benchmark))
+                                         host impl (release-on-day impl day) benchmark))
                     benchmark
                     (if (< from to) "<span style=\"color:#FF0000;\">increased</span>" "<span style=\"color:#00FF00;\">decreased</span>")
                     (digits-format-string from f-err) from
@@ -155,7 +152,7 @@
                                                            (* (/ (stddev y.seconds) (sqrt (count y.seconds)))
                                                               (/ (stddev y.seconds) (sqrt (count y.seconds))))))))))))
                               on-connection *dbconn*)
-                         (collect (summarize-day/benchmark pp-day b-name implementation y-avg t-avg y-err t-err))))
+                         (collect (summarize-day/benchmark pp-day b-name implementation host y-avg t-avg y-err t-err))))
            (when impl-entry
              (collect `(|li| "from " ,implementation " revision " ,p-version " to " ,version ":"
                              (|ul| 
@@ -224,14 +221,10 @@
                           :content-type "text/xml; charset=utf-8"))
   (let ((s (request-stream request)))
     (format s "<?xml version=\"1.0\" encoding=\"utf-8\"?>")
-    (param-bind ((implementation "SBCL" t)
-                 (host "walrus.boinkor.net")) request
+    (param-bind ((implementation "SBCL-32")
+                 (host "baker")) request
       (html-stream s
                    (emit-significant-changes :implementation implementation
                                              :host host)))))
-
-(install-handler (http-listener-handler *bench-listener*)
-		 (make-instance 'atom-handler)
-		 (urlstring *atom-url*) nil)
 
 ;;; arch-tag: "17408c28-fd4d-488d-956c-17590e0c8494"

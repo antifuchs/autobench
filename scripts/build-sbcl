@@ -1,0 +1,11 @@
+#!/bin/sh
+
+case "$1" in
+    x86)
+        export SBCL_ARCH=x86
+        ;;
+esac
+
+export PATH=`dirname $0`:$PATH
+shift
+./make.sh "$@"

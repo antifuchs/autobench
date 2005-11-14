@@ -3,6 +3,12 @@
 (defclass sbcl (implementation)
      ((name :allocation :class :initform "SBCL")))
 
+(defclass sbcl-32 (sbcl)
+     ((name :allocation :class :initform "SBCL-32")))
+
+(defclass sbcl-64 (sbcl)
+     ((name :allocation :class :initform "SBCL-64")))
+
 (defclass sbcl-character (sbcl)
      ((name :allocation :class :initform "SBCL-character")))
 
@@ -12,9 +18,22 @@
     (with-open-file (f #p"version.lisp-expr" :direction :input)
       (read f))))
 
-(defmethod build-in-directory ((implementation sbcl) directory)
+(defmethod build-in-directory ((implementation sbcl-32) directory)
   (with-current-directory directory
-    (handler-case (invoke-logged-program "build-sbcl" #p"make.sh" *sbcl-build-args*)
+    (handler-case (invoke-logged-program "build-sbcl" (merge-pathnames #p"scripts/run-in-32bit" *base-dir*)
+                                         `("./make.sh" ,@*sbcl32-build-args*)
+                                         :environment `("CC=gcc-3.3"
+                                                        ,@(sb-ext:posix-environ)))
+      (program-exited-abnormally ()
+        (error 'implementation-unbuildable
+               :implementation implementation)))
+    implementation))
+
+(defmethod build-in-directory ((implementation sbcl-64) directory)
+  (with-current-directory directory
+    (handler-case (invoke-logged-program "build-sbcl" "make.sh" *sbcl64-build-args*
+                                         :environment `("CC=gcc-3.3"
+                                                        ,@(sb-ext:posix-environ)))
       (program-exited-abnormally ()
         (error 'implementation-unbuildable
                :implementation implementation)))
@@ -25,13 +44,25 @@
           :test #'string-equal
           :key (lambda (envl) (subseq envl 0 (position #\= envl)))))
 
-(defmethod run-benchmark ((impl sbcl))
+(defun prepare-bench-sbcl-environment (impl)
+  (list (format nil "SBCL=~A" (namestring (implementation-cached-file-name impl "sbcl")))
+        (format nil "SBCL_OPT=--core ~A --userinit /dev/null --disable-debugger --boink-core-file ~A ~
+                     --boink-implementation-type ~A"
+                (namestring (implementation-cached-file-name impl "sbcl.core"))
+                (namestring (implementation-cached-file-name impl "sbcl.core"))
+                (impl-name impl))))
+
+(defmethod run-benchmark ((impl sbcl-64))
   (with-unzipped-implementation-files impl
     (invoke-logged-program "bench-sbcl" "/usr/bin/env" '("bash" "run-sbcl.sh")
-			   :environment `(,(format nil "SBCL=~A" (namestring (implementation-cached-file-name impl "sbcl")))
-					  ,(format nil "SBCL_OPT=--core ~A --userinit /dev/null --disable-debugger --boink-core-file ~A"
-						   (namestring (implementation-cached-file-name impl "sbcl.core"))
-						   (namestring (implementation-cached-file-name impl "sbcl.core")))
+			   :environment `(,@(prepare-bench-sbcl-environment impl)
+					  ,@(prepare-sbcl-environment)))))
+
+(defmethod run-benchmark ((impl sbcl-32))
+  (with-unzipped-implementation-files impl
+    (invoke-logged-program "bench-sbcl" (merge-pathnames #p"scripts/run-in-32bit" *base-dir*)
+                           '("/usr/bin/env" "bash" "run-sbcl.sh")
+			   :environment `(,@(prepare-bench-sbcl-environment impl)
 					  ,@(prepare-sbcl-environment)))))
 
 (defmethod implementation-required-files ((impl sbcl))
@@ -48,14 +79,11 @@
 
 (defmethod next-directory ((impl sbcl) directory)
   (with-input-from-program (missing *tla-binary* "missing" "--dir" (namestring directory))
-    (with-input-from-program (version *tla-binary* "tree-version" (namestring directory))
-      (let* ((version (read-line version))
-	     (next-rev (read-line missing nil nil))
-	     (revision-spec (format nil "~A--~A" version next-rev)))
-	(when next-rev
-	  (invoke-logged-program "tla-sbcl-update" *tla-binary*
-				 `("update" "--dir" ,(namestring directory) ,revision-spec))
-	  directory)))))
+    (let* ((next-rev (read-line missing nil nil)))
+      (when next-rev
+        (invoke-logged-program "baz-sbcl-replay" *tla-binary*
+                               `("replay" "--dir" ,(namestring directory) ,next-rev))
+        directory))))
 
 (defmethod implementation-release-date ((impl sbcl) directory)
   (with-input-from-program (last-revision *tla-binary* "logs" "-r" "-d" (namestring directory))

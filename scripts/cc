@@ -1,0 +1,12 @@
+#!/bin/sh
+
+#echo "hallo test!!!!"
+
+case $SBCL_ARCH in
+    x86)
+        /usr/bin/gcc-3.3 -m32 -L/emul/ia32-linux/usr/lib -L/emul/ia32-linux/lib "$@"
+        ;;
+    x86-64)
+        /usr/bin/gcc-3.3 -m64 "$@"
+        ;;
+esac

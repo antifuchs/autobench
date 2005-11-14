@@ -1,13 +1,14 @@
 ;;; defpackage.lisp -- DEFPACKAGE forms for the cl-bench modules
 ;;
-;; Time-stamp: <2004-03-14 14:16:15 asf>
+;; Time-stamp: <2005-11-13 10:58:26 asf>
 
 
 (defpackage :cl-bench
   (:use :common-lisp
         #+cmu :ext
         #+clisp :ext
-        #+allegro :excl))
+        #+allegro :excl)
+  (:export :find-program-argument-value :program-invocation-arguments))
 
 (defpackage :cl-bench.gabriel
   (:use :common-lisp)

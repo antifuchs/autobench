@@ -136,7 +136,7 @@ return NIL."))
        (unwind-protect (progn ,@body)
          ;; eat up the rest of the output
          (when (input-stream-p ,stream)
-             (iterate (for line in-stream ,stream using #'read-line)))
+           (iterate (for line in-stream ,stream using #'read-line)))
 	 (sb-ext:process-wait ,proc)
 	 (unless (zerop (sb-ext:process-exit-code ,proc))
 	   (error 'program-exited-abnormally

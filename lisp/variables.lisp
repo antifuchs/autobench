@@ -10,10 +10,10 @@ Usage is analogous to that of ECASE."
 
 
 ;;; Connection to the SB-BENCH database
-(defvar *dbconn* (machine-ecase
+(defparameter *dbconn* (machine-ecase
                    ("walrus.boinkor.net" (pg-connect "sbcl-arch" "sbcl-arch"))
                    ("beaver" (pg-connect "asf" "asf"))
-                   ("baker" (pg-connect "sbcl-arch" "sbcl-arch"))))
+                   ("baker" (pg-connect "sbcl-arch" "sbcl-arch" :host #p"/tmp/"))))
 
 ;;; base directory of the sb-bench installation
 (defparameter *base-dir* (machine-ecase
@@ -42,7 +42,12 @@ Usage is analogous to that of ECASE."
 To get any useful information on variance between benchmark runs,
 this should be >=3.")
 
-(defparameter *sbcl-build-args* '("lisp -batch")
+(defparameter *sbcl64-build-args* '("sbcl64 --userinit /dev/null --disable-debugger")
+  "The program that the SBCL build should use as a host compiler.
+For improved compilation speed, I recommend using CMUCL 18e (-:")
+
+
+(defparameter *sbcl32-build-args* '("'sbcl32 --userinit /dev/null --disable-debugger'")
   "The program that the SBCL build should use as a host compiler.
 For improved compilation speed, I recommend using CMUCL 18e (-:")
 

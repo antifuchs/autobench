@@ -8,12 +8,13 @@
       (<= (count #\. vnum) 2)))
 
 (defun translate-version (version)
-  (when (string= "CMU Common Lisp" (first version))
-    (setf (first version) "CMUCL"))
-  (let ((v (assoc version *version-translations* :test #'equal)))
-    (if v
-        (cdr v)
-        version)))
+  (let ((version (copy-list version)))
+    (when (string= "CMU Common Lisp" (first version))
+      (setf (first version) "CMUCL"))
+    (let ((v (assoc version *version-translations* :test #'equal)))
+      (if v
+          (cdr v)
+          version))))
 
 (defmacro ignore-pg-errors (&rest body)
   `(handler-case (progn ,@body)
@@ -38,8 +39,9 @@
                                       (let ((*read-eval* nil))
                                         (read f)))))
         (handler-case
-            (destructuring-bind (impl version &rest benchmark) (read s :eof-error-p nil)
+            (destructuring-bind (impl boinkmarks-impl version &rest benchmark) (read s :eof-error-p nil)
               (destructuring-bind (i-name i-version) (translate-version (list impl version))
+                (declare (ignore i-name))  ; we use the impl name that cl-bench promised us.
                 (let* ((stat (sb-posix:stat file))
                        (mtime (sb-posix::stat-mtime stat)))
                   ;; first, make sure the benchmark exists; we don't
@@ -58,7 +60,7 @@
 				  
                         (pg-exec *dbconn* (format nil "insert into result (date, v_name, v_version, b_name, m_name, seconds) ~
                                                        values (to_universal_time(~A::int4::abstime), '~A', '~A', '~A', '~A', ~f)"
-                                                  mtime i-name i-version b-name machine-name u-secs))))))))
+                                                  mtime boinkmarks-impl i-version b-name machine-name u-secs))))))))
           (cl:end-of-file () nil))))
     (rename-file file (ensure-directories-exist
                        (merge-pathnames (make-pathname :name (pathname-name file))

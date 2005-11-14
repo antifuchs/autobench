@@ -1,16 +1,9 @@
 (in-package :autobench-web)
 
-(defparameter *site-name* "beaver.boinkor.net")
-(defparameter *dbconn* (pg-connect "asf" "asf"))
+(defparameter *site-name* "sbcl-test.boinkor.net")
 
-(defparameter *prefab-base* #p"/home/asf/hack/autobench/+prefab/")
+(defparameter *prefab-base* #p"/home/sbcl-arch/autobench/+prefab/")
 (defparameter *ploticus-binary* "/usr/bin/ploticus")
-
-
-
-
-
-
 
 (defparameter *localhost-name* "localhost")
 (defparameter *external-port* 80)
@@ -21,28 +14,33 @@
 				    :port *external-port*)
 			  "/bench/"))
 
+(defparameter *internal-base-url* (let ((fwd-url (copy-url *base-url*)))
+                                    (setf (url-port fwd-url) (+ 1024 (url-port *base-url*)))
+                                    (setf (url-host fwd-url) *localhost-name*)
+                                    fwd-url))
+
 (defparameter *webserver-url* (merge-url (make-url :scheme "http"
                                                    :host *site-name*
                                                    :port 80)
                                          "/prefab/"))
 
-(defparameter *index-url* (merge-url *base-url* "index/"))
+(defparameter *index-url* *base-url*)
 (defparameter *atom-url* (merge-url *base-url* "atom/")) ; see syndication.lisp
 
-(defvar *bench-listener*)
-(let ((fwd-url (copy-url *base-url*)))
-  (setf (url-port fwd-url) (+ 1024 (url-port *base-url*)))
-  (setf (url-host fwd-url) *localhost-name*)
-  (setf *bench-listener*
-        (make-instance #+sbcl #+sb-thread 'threaded-reverse-proxy-listener
-                       #+sbcl #-sb-thread 'araneida:serve-event-reverse-proxy-listener
-                       #-sbcl 'threaded-reverse-proxy-listener
-                       :address #(127 0 0 1)
-                       :port (araneida:url-port fwd-url)
-                       :translations `((,(urlstring *base-url*) ,(urlstring fwd-url))))))
+(defparameter *bench-listener* (make-instance #+sbcl #+sb-thread 'threaded-reverse-proxy-listener
+                                              #+sbcl #-sb-thread 'araneida:serve-event-reverse-proxy-listener
+                                              #-sbcl 'threaded-reverse-proxy-listener
+                                              :address #(127 0 0 1)
+                                              :port (araneida:url-port *internal-base-url*)
+                                               :translations nil
+                                               ;; `((,(urlstring *base-url*) ,(urlstring *internal-base-url*)))
+                                              ))
 
 (defvar *latest-result*) ; latest result entry's date in the DB
 (defclass index-handler (handler) ())
+(defclass atom-handler (handler) ())
+
+(setf araneida::*handler-timeout* 240) ; XXX: make this thing faster (;
 
 (defun last-version ()
   (second (pg-result (pg-exec *dbconn*
@@ -115,7 +113,8 @@
                                                ,(format nil "data=~A" (namestring filename)) "delim=tab" "x=1"
                                                "ygrid=yes" "xlbl=version" ,(format nil "ylbl=~A" unit) "cats=yes" "-pagesize" "15,8" "autow=yes"
                                                "yrange=0"
-                                               "ynearest=5" ; used to be 0.5. now ploticus doesn't scale according to the second column. TODO?
+                                               "ylog=log"
+                                               ;; "ynearest=0.5" ; works better with linear scale.
                                                "stubvert=yes"
                                                ,@(iterate (for (impl offset) in-relation
                                                                (translate* `(select (name field-offset)
@@ -148,10 +147,11 @@
       (apply #'generate-image-for conditions))))
 
 (defun url-for-image (&rest conditions)
-  (urlstring (merge-url *webserver-url*
-                        (namestring
-                         (make-pathname :type "png"
-                                        :defaults (apply #'file-name-for conditions))))))
+  (let* ((filename (make-pathname :type "png"
+                                  :defaults (apply #'file-name-for conditions)))
+         (absolute-filename (merge-pathnames filename *prefab-base*)))
+    (values (urlstring (merge-url *webserver-url* (namestring filename)))
+          absolute-filename)))
 
 (defun date-boundaries (&rest conditions &key host only-release &allow-other-keys)
   (declare (ignore conditions))
@@ -192,30 +192,36 @@
            ((input :type "hidden" :value ,host :name :host))
            (h2 "Machine")
            (ul
-            ,@(iterate (for (machine) in-relation
-                            (translate* `(distinct (select (m_name) result)))
+            ,@(iterate (for (machine arch) in-relation
+                            (translate* `(distinct (select (m-name type) (join result machine
+                                                                          :on (= result.m-name machine.name)))))
                             on-connection *dbconn*)
                        (collect `(li ((a :href ,(format nil "~A?host=~A" (urlstring *index-url*) machine)
                                          ,@(if (equal host machine)
                                                (list :class "selected")
                                                ()))
-                                      ,machine)))))
+                                      ,(format nil "~A | ~A" machine arch))))))
            (h2 "Version")
            ,(make-multi-select :implementations implementations
-                               (iterate (for (impl) in-relation
-                                             (translate* `(select (name) impl))
-                                             on-connection *dbconn*)
-                                        (collect `(,impl ,impl))))
+                               (mapcar (lambda (impl) (list impl impl)) (all-implementations-of-host host)))
            (h2 "Release")
            ,(make-select :only-release only-release
                          (cons '(nil "All releases")
-                               (iterate (for (version steps) in-relation
-                                             (let ((subsel `(select ((count *))
-                                                                    (where (as version v2)
-                                                                           (like v2.version (++ v.version ".%"))))))
-                                               (translate* `(select (version ,subsel)
-                                                                    (where (as version v)
-                                                                           (> ,subsel 0)))))
+                               (iterate (for (version date steps) in-relation
+                                             (translate*
+                                              `(select (v.version v.release-date (count v2.version))
+                                                       (order-by
+                                                        (group-by (where (join (as version v)
+                                                                               (as version v2)
+                                                                               :on (and (= v.i-name v2.i-name)
+                                                                                        (like v2.version (++ v.version ".%"))))
+                                                                         (exists (select (*)
+                                                                                         (where (as result r)
+                                                                                                (and (= r.m-name ,host)
+                                                                                                     (= r.v-name v.i-name)
+                                                                                                     (= r.v-version v2.version))))))
+                                                                  (v.version v.release-date))
+                                                        (v.release-date)))) 
                                              on-connection *dbconn*)
                                         (collect `(,version ,(format nil "~A (~A)" version steps))))))
            ((input :type :submit))
@@ -224,13 +230,17 @@
             "Atom 0.3")))
          ((div :id "content")
           ,@(iterate (for (benchmark unit) in benchmarks)
+                     (for (values image-url filename) = (apply #'url-for-image
+                                                               :benchmark benchmark
+                                                               :earliest earliest
+                                                               :latest latest
+                                                               args))
+                     (for (values width height) = (decode-width-and-height-of-png-file filename))
                      (collect `(h1 ,benchmark))
                      (collect `((a :name ,benchmark)))
-                     (collect `((img :src ,(apply #'url-for-image
-                                                  :benchmark benchmark
-                                                  :earliest earliest
-                                                  :latest latest
-                                                  args)
+                     (collect `((img :src ,image-url
+                                     :width ,width
+                                     :height ,height
                                      :alt ,benchmark))))))))))
 
 (defun enteredp (param)
@@ -258,6 +268,15 @@
                            (setf ,arg nil))))
        ,@body)))
 
+(defun all-implementations-of-host (host)
+  (iterate (for (impl) in-relation
+                (translate* `(distinct
+                              (select (v-name)
+                                      (where result
+                                             (= ,host m-name)))))
+                on-connection *dbconn*)
+           (collect impl)))
+
 (defmethod handle-request-response ((handler index-handler) method request)
   (let ((*latest-result* (first (pg-result (pg-exec *dbconn* "select max(date) from result") :tuple 0))))
     (request-send-headers request
@@ -266,9 +285,9 @@
                           :conditional t) 
     (let ((s (request-stream request)))
       (format s "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\" \"http://www.w3.org/TR/html4/loose.dtd\">")
-      (param-bind ((implementations '("SBCL" "CMUCL") t)
+      (param-bind ((host "baker")
                    (only-release nil) ; TODO: this mode should display the last CVS version's results.
-                   (host "walrus.boinkor.net")) request
+                   (implementations (all-implementations-of-host host) t)) request
         (emit-image-index s
                           :implementations implementations
                           :only-release only-release
@@ -290,9 +309,9 @@
 	    else
 	      collect `((option :value ,op) ,text))))
 
-(install-handler (http-listener-handler *bench-listener*)
-		 (make-instance 'index-handler)
-		 (urlstring *index-url*) nil)
+(araneida:attach-hierarchy (http-listener-handler *bench-listener*) *internal-base-url* *base-url*
+  ("/" index-handler)
+  ("/atom"  atom-handler))
 
 
 ;; arch-tag: 05bed3a0-4ebb-4dc6-8308-3033a1c00f65

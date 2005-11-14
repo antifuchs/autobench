@@ -1,7 +1,7 @@
 ;;; support.lisp --- performance benchmarks for Common Lisp implementations
 ;;
 ;; Author: Eric Marsden  <emarsden@laas.fr>
-;; Time-stamp: <2004-09-05 15:43:58 asf>
+;; Time-stamp: <2005-11-13 11:26:43 asf>
 ;;
 ;;
 ;; The benchmarks consist of
@@ -22,8 +22,22 @@
 (defvar *benchmarks* '())
 (defvar *benchmark-results* '())
 
+(defun program-invocation-arguments ()
+  "Return the cl-bench startup arguments as a list. 
+If they can not be retrieved, return NIL."
+  #+sbcl sb-ext:*posix-argv*
+  #+cmu ext:*command-line-strings*
+  #-(or sbcl cmu) nil)
+
+(defun find-program-argument-value (posix-args core-arg)
+  (loop for args on posix-args
+	when (string-equal (first args) core-arg)
+	  return (second args)))
+
 (defvar +implementation+
-  (list (lisp-implementation-type) (lisp-implementation-version)))
+  (list (lisp-implementation-type) (find-program-argument-value (program-invocation-arguments)
+                                                                "--boink-implementation-type")
+        (lisp-implementation-version)))
 
 
 (defclass benchmark ()

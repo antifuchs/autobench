@@ -9,7 +9,8 @@
     :depends-on (autobench pg split-sequence iterate iterate-pg araneida common-idioms sexql)
     :components ((:file "package")
                  (:file "util" :depends-on ("package"))
-                 (:file "araneida-glue" :depends-on ("package" "util"))
+                 (:file "png-frobnicator" :depends-on ("package"))
+                 (:file "araneida-glue" :depends-on ("package" "util" "png-frobnicator"))
                  (:file "syndication" :depends-on ("package" "araneida-glue" "util"))))
 
 
