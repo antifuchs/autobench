@@ -32,7 +32,16 @@ cp -Rp sbcl manual
 # make a tarball and unpack it in SBCL's web space
 
 tar zcf sbcl-manual.tgz manual
-sleep 200
-cat sbcl-manual.tgz | ssh $UPLOADER_NAME@shell.sf.net cd /home/groups/s/sb/sbcl/htdocs ";" tar zxf -
+
+# build internals manual
+
+cd ../internals
+"$GNUMAKE" clean
+"$GNUMAKE" html
+tar zcf sbcl-internals.tgz sbcl-internals
+
+sleep 20
+cat "$DIR"/doc/manual/sbcl-manual.tgz | ssh $UPLOADER_NAME@shell.sf.net cd /home/groups/s/sb/sbcl/htdocs ";" tar zxf -
+cat "$DIR"/doc/internals/sbcl-internals.tgz | ssh $UPLOADER_NAME@shell.sf.net cd /home/groups/s/sb/sbcl/htdocs ";" tar zxf -
 
 # arch-tag: "100855f9-ff31-11d8-8b1b-000c76244c24"

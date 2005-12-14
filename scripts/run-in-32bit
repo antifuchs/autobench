@@ -1,1 +1,3 @@
-/usr/bin/linux32 /usr/bin/dchroot -d "$@"
+#!/bin/bash
+
+/usr/bin/linux32 --3gb /usr/bin/dchroot -d "$@" 2>&1

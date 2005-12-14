@@ -1,0 +1,11 @@
+#!/bin/sh -ex
+
+echo hallo test
+
+VER=$1; shift
+DIR=${1:-.}; shift || true
+
+mkdir ~/autobench/+build-archive/CMUCL/0758fa7a313a98296233e34e5be0c4fb/$VER/ ||true
+find $DIR \( -name lisp -o -name lisp.core \) -exec mv -i '{}' ~/autobench/+build-archive/CMUCL/0758fa7a313a98296233e34e5be0c4fb/$VER/ ';'
+
+# arch-tag: "a165a727-7501-44d5-bcda-b622f8014e16"

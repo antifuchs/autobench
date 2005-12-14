@@ -18,15 +18,25 @@
              :implementation implementation))
     implementation))
 
+
+(defmethod run-cmucl-benchmark (impl (arch (eql :x86)))
+  (invoke-logged-program "bench-cmucl" "/usr/bin/env"
+                         `("bash" "run-cmucl.sh" ,(namestring (implementation-cached-file-name impl "lisp"))
+                                  "-batch" "-core" ,(namestring (implementation-cached-file-name impl "lisp.core"))
+                                  "--boink-core-file" ,(namestring (implementation-cached-file-name impl "lisp.core"))
+                                  "--boink-implementation-type" ,(implementation-translated-mode impl))))
+
+(defmethod run-cmucl-benchmark (impl (arch (eql :emulated-x86)))
+  (invoke-logged-program "bench-cmucl" (merge-pathnames #p"scripts/run-in-32bit" *base-dir*)
+                         `("bash" "run-cmucl.sh" ,(namestring (implementation-cached-file-name impl "lisp"))
+                           "-batch" "-core" ,(namestring (implementation-cached-file-name impl "lisp.core"))
+                           "--boink-core-file" ,(namestring (implementation-cached-file-name impl "lisp.core"))
+                           "--boink-implementation-type" ,(shellquote (implementation-translated-mode impl) t))))
+
 (defmethod run-benchmark ((impl cmucl))
   (with-unzipped-implementation-files impl
     (with-current-directory *cl-bench-base*
-      (invoke-logged-program "bench-cmucl" "/usr/bin/env" '("bash" "run-cmucl.sh")
-                             :environment `(,(format nil "CMUCL=~A" (namestring (implementation-cached-file-name impl "lisp")))
-                                             ,(format nil "CMUCLOPT=-batch -core ~A --boink-core-file ~A"
-                                                      (namestring (implementation-cached-file-name impl "lisp.core"))
-                                                      (namestring (implementation-cached-file-name impl "lisp.core")))
-                                             ,@(sb-ext:posix-environ))))))
+      (run-cmucl-benchmark impl (getf (impl-mode impl) :arch)))))
 
 (defmethod implementation-required-files ((impl cmucl))
   (declare (ignore impl))

@@ -3,67 +3,105 @@
 (defclass sbcl (implementation)
      ((name :allocation :class :initform "SBCL")))
 
-(defclass sbcl-32 (sbcl)
-     ((name :allocation :class :initform "SBCL-32")))
-
-(defclass sbcl-64 (sbcl)
-     ((name :allocation :class :initform "SBCL-64")))
-
-(defclass sbcl-character (sbcl)
-     ((name :allocation :class :initform "SBCL-character")))
-
 (defmethod version-from-directory ((impl sbcl) directory)
   (declare (ignore impl))
   (let ((*read-eval* nil))
     (with-open-file (f #p"version.lisp-expr" :direction :input)
       (read f))))
 
-(defmethod build-in-directory ((implementation sbcl-32) directory)
-  (with-current-directory directory
-    (handler-case (invoke-logged-program "build-sbcl" (merge-pathnames #p"scripts/run-in-32bit" *base-dir*)
-                                         `("./make.sh" ,@*sbcl32-build-args*)
-                                         :environment `("CC=gcc-3.3"
-                                                        ,@(sb-ext:posix-environ)))
-      (program-exited-abnormally ()
-        (error 'implementation-unbuildable
-               :implementation implementation)))
-    implementation))
 
-(defmethod build-in-directory ((implementation sbcl-64) directory)
+
+(defmacro with-customize-target-features (features &body body)
+  `(unwind-protect
+       (if features
+           (progn
+             (with-open-file (f #P"customize-target-features.lisp" :direction :output :if-exists :supersede)
+               (print `(lambda (features)
+                         (flet ((enable (x)
+                                  (pushnew x features))
+                                (disable (x)
+                                  (setf features (remove x features))))
+                           ,@(loop for feature in ,features
+                                   for disabled-feature = (when (and (consp feature)
+                                                                     (eql (first feature) 'not))
+                                                            (second feature))
+                                   if (not (null disabled-feature))
+                                     collect `(disable ,disabled-feature)
+                                   else
+                                     collect `(enable ,feature))
+                           features))
+                      f))
+             ,@body)
+           (progn ,@body))
+     (when (probe-file #P"customize-target-features.lisp")
+       (delete-file #P"customize-target-features.lisp"))))
+
+(defun cleanup-build-dir ()
+  (when (probe-file #p"tools-for-build/grovel-headers")
+    (delete-file #p"tools-for-build/grovel-headers")))
+
+(defmethod build-in-directory ((implementation sbcl) directory)
   (with-current-directory directory
-    (handler-case (invoke-logged-program "build-sbcl" "make.sh" *sbcl64-build-args*
-                                         :environment `("CC=gcc-3.3"
-                                                        ,@(sb-ext:posix-environ)))
-      (program-exited-abnormally ()
-        (error 'implementation-unbuildable
-               :implementation implementation)))
-    implementation))
+    (destructuring-bind (&key arch features) (impl-mode implementation)
+      (cleanup-build-dir)
+      (with-customize-target-features features
+        (build-sbcl-in-directory implementation arch)))))
+
+(defmethod build-sbcl-in-directory ((implementation sbcl) (arch (eql :emulated-x86)))
+  (handler-case (invoke-logged-program "build-sbcl" (merge-pathnames #p"scripts/run-in-32bit" *base-dir*)
+                                       `("./make.sh" ,@*sbcl32-build-args*)
+                                       :environment `("CC=gcc-2.95"
+                                                      ,@(sb-ext:posix-environ)))
+    (program-exited-abnormally ()
+      (error 'implementation-unbuildable
+             :implementation implementation)))
+  implementation)
+
+(defmethod build-sbcl-in-directory ((implementation sbcl) (arch (eql :x86_64)))
+  (handler-case (invoke-logged-program "build-sbcl" "make.sh" *sbcl64-build-args*
+                                       :environment `("CC=gcc-3.3"
+                                                      ,@(sb-ext:posix-environ)))
+    (program-exited-abnormally ()
+      (error 'implementation-unbuildable
+             :implementation implementation)))
+  implementation)
 
 (defun prepare-sbcl-environment ()
   (remove "SBCL_HOME" (sb-ext:posix-environ)
           :test #'string-equal
           :key (lambda (envl) (subseq envl 0 (position #\= envl)))))
 
-(defun prepare-bench-sbcl-environment (impl)
-  (list (format nil "SBCL=~A" (namestring (implementation-cached-file-name impl "sbcl")))
-        (format nil "SBCL_OPT=--core ~A --userinit /dev/null --disable-debugger --boink-core-file ~A ~
-                     --boink-implementation-type ~A"
-                (namestring (implementation-cached-file-name impl "sbcl.core"))
-                (namestring (implementation-cached-file-name impl "sbcl.core"))
-                (impl-name impl))))
+(defun shellquote (arg quote-p)
+  (if quote-p
+      (format nil "'~A'" arg)
+      arg))
 
-(defmethod run-benchmark ((impl sbcl-64))
-  (with-unzipped-implementation-files impl
-    (invoke-logged-program "bench-sbcl" "/usr/bin/env" '("bash" "run-sbcl.sh")
-			   :environment `(,@(prepare-bench-sbcl-environment impl)
-					  ,@(prepare-sbcl-environment)))))
+(defun prepare-bench-sbcl-cmdline (impl shell-quote-p)
+  (list (format nil "~A" (shellquote (namestring (implementation-cached-file-name impl "sbcl")) shell-quote-p))
+        "--core" (shellquote (namestring (implementation-cached-file-name impl "sbcl.core")) shell-quote-p)
+        "--userinit" "/dev/null" "--disable-debugger"
+        "--boink-core-file" (shellquote (namestring (implementation-cached-file-name impl "sbcl.core")) shell-quote-p)
+        "--boink-implementation-type" (shellquote (implementation-translated-mode impl) shell-quote-p)))
 
-(defmethod run-benchmark ((impl sbcl-32))
+(defmethod run-sbcl-benchmark (impl (arch (eql :emulated-x86)))
+  (invoke-logged-program "bench-sbcl" (merge-pathnames #p"scripts/run-in-32bit" *base-dir*)
+                         `("./run-sbcl.sh" ,@(prepare-bench-sbcl-cmdline impl t))
+                         :environment (prepare-sbcl-environment)))
+
+(defmethod run-sbcl-benchmark (impl (arch (eql :x86_64)))
+  (invoke-logged-program "bench-sbcl" "/usr/bin/env"
+                         `("./run-sbcl.sh" ,@(prepare-bench-sbcl-cmdline impl nil))
+                         :environment (prepare-sbcl-environment)))
+
+(defmethod run-sbcl-benchmark (impl (arch (eql :x86)))
+  (invoke-logged-program "bench-sbcl" "/usr/bin/env"
+                         `("./run-sbcl.sh" ,@(prepare-bench-sbcl-cmdline impl nil))
+                         :environment (prepare-sbcl-environment)))
+
+(defmethod run-benchmark ((impl sbcl))
   (with-unzipped-implementation-files impl
-    (invoke-logged-program "bench-sbcl" (merge-pathnames #p"scripts/run-in-32bit" *base-dir*)
-                           '("/usr/bin/env" "bash" "run-sbcl.sh")
-			   :environment `(,@(prepare-bench-sbcl-environment impl)
-					  ,@(prepare-sbcl-environment)))))
+    (run-sbcl-benchmark impl (getf (impl-mode impl) :arch))))
+
 
 (defmethod implementation-required-files ((impl sbcl))
   (declare (ignore impl))
@@ -78,11 +116,18 @@
 	  :test 'equal)))
 
 (defmethod next-directory ((impl sbcl) directory)
-  (with-input-from-program (missing *tla-binary* "missing" "--dir" (namestring directory))
+  (with-input-from-program (missing *tla-binary* "missing" "-f" "--dir" (namestring directory))
     (let* ((next-rev (read-line missing nil nil)))
       (when next-rev
-        (invoke-logged-program "baz-sbcl-replay" *tla-binary*
-                               `("replay" "--dir" ,(namestring directory) ,next-rev))
+        (handler-case
+            (invoke-logged-program "baz-sbcl-update" *tla-binary*
+                                `("update" "--dir" ,(namestring directory) ,next-rev))
+          (program-exited-abnormally ()
+            ;; baz generated a conflict, maybe.
+            (invoke-logged-program "rm-sbcl-build-dir" "/bin/rm"
+                                   `("-rf" ,(namestring directory)))
+            (invoke-logged-program "baz-sbcl-get" *tla-binary*
+                                `("get" ,next-rev ,(namestring directory)))))
         directory))))
 
 (defmethod implementation-release-date ((impl sbcl) directory)
@@ -107,7 +152,7 @@
   (with-unzipped-implementation-files impl
     (invoke-logged-program "sbcl-build-manual" (namestring (merge-pathnames #p"scripts/sbcl-build-manual" *base-dir*))
                            `(,(namestring dir) "antifuchs"
-                             ,@(mapcar (lambda (f) (namestring (implementation-cached-file-name impl f)))
+                              ,@(mapcar (lambda (f) (namestring (implementation-cached-file-name impl f)))
                                        (implementation-required-files impl)))
                            :environment `(,@(prepare-sbcl-environment)))))
 
@@ -115,7 +160,7 @@
   "If this is the last revision, build the manual and report a
 possible build failure to *SBCL-DEVELOPERS*."
   (if (and (last-version-p dir)
-           (equalp "walrus.boinkor.net" (machine-instance))) ;; only makes sense on walrus
+           (equalp "baker" (machine-instance))) ;; only makes sense on one autobuild host
       (handler-case (progn (call-next-method impl dir)
                            (build-manual impl dir))
         (implementation-unbuildable (e)

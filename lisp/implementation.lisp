@@ -2,7 +2,8 @@
 
 (defclass implementation ()
      ((version :accessor impl-version :initform nil :initarg :version)
-      (name :accessor impl-name :allocation :class :initform nil)))
+      (name :accessor impl-name :allocation :class :initform nil)
+      (mode :accessor impl-mode :allocation :instance :initform nil :initarg :mode)))
 
 (define-condition implementation-unbuildable ()
   ((implementation :accessor unbuildable-implementation :initarg :implementation)))
@@ -62,9 +63,13 @@ return NIL."))
 ;;; use and functions that our implementations may expect to be
 ;;; executed for them.
 
+(defmethod implementation-translated-mode ((impl implementation))
+  (format nil "~S" (impl-mode impl)))
+
 (defun implementation-cached-file-name (impl file-name)
   (make-pathname :directory (append (pathname-directory *version-cache-dir*)
-				    (list (impl-name impl) (impl-version impl)))
+				    (list (impl-name impl) (md5-pathname-component (implementation-translated-mode impl))
+                                          (impl-version impl)))
 		 :name (pathname-name file-name)
 		 :type (pathname-type file-name)))
 
@@ -174,6 +179,10 @@ return NIL."))
 			    (ensure-directories-exist
 			     (implementation-cached-file-name impl file))))
       impl)))
+
+(defun md5-pathname-component (string &key (external-format :default))
+  (format nil "~(~{~2,'0X~}~)"
+          (map 'list #'identity (sb-md5:md5sum-string string :external-format external-format))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; our own helper functions. Not really for public use.

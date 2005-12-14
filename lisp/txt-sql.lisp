@@ -21,13 +21,16 @@
      (pg::backend-error () nil)
      (pg::error-response () nil)))
 
-(defun import-release-into-db (impl date)
+(defun import-release-into-db (impl date mode)
   (ignore-pg-errors
    (pg-exec *dbconn* (format nil "insert into impl values ('~A', (select max(field_offset)+2 from impl))" (impl-name impl))))
   (ignore-pg-errors
    (pg-exec *dbconn* (format nil "insert into version (i_name, version, release_date, is_release) values ('~A', '~A', ~A, ~A)"
                              (impl-name impl) (impl-version impl) date
-                             (if (release-p (impl-version impl)) "TRUE" "FALSE")))))
+                             (if (release-p (impl-version impl)) "TRUE" "FALSE"))))
+  (ignore-pg-errors
+   (pg-exec *dbconn* (format nil "insert into build (v_name, v_version, mode) values ('~A', '~A', '~A')"
+                             (impl-name impl) (impl-version impl) mode))))
 
 (defun read-benchmark-data (dir machine-name)
   (dolist (file (directory (merge-pathnames #p"CL-benchmark*.*" dir)))
@@ -39,9 +42,8 @@
                                       (let ((*read-eval* nil))
                                         (read f)))))
         (handler-case
-            (destructuring-bind (impl boinkmarks-impl version &rest benchmark) (read s :eof-error-p nil)
-              (destructuring-bind (i-name i-version) (translate-version (list impl version))
-                (declare (ignore i-name))  ; we use the impl name that cl-bench promised us.
+            (destructuring-bind (impl mode version &rest benchmark) (read s :eof-error-p nil)
+              (destructuring-bind (i-name version) (translate-version (list impl version))
                 (let* ((stat (sb-posix:stat file))
                        (mtime (sb-posix::stat-mtime stat)))
                   ;; first, make sure the benchmark exists; we don't
@@ -58,9 +60,9 @@
                       (destructuring-bind (b-name r-secs u-secs &rest ignore) b
                         (declare (ignore r-secs ignore))
 				  
-                        (pg-exec *dbconn* (format nil "insert into result (date, v_name, v_version, b_name, m_name, seconds) ~
-                                                       values (to_universal_time(~A::int4::abstime), '~A', '~A', '~A', '~A', ~f)"
-                                                  mtime boinkmarks-impl i-version b-name machine-name u-secs))))))))
+                        (pg-exec *dbconn* (format nil "insert into result (date, v_name, v_version, mode, b_name, m_name, seconds) ~
+                                                       values (to_universal_time(~A::int4::abstime), '~A', '~A', '~A', '~A', '~A', ~f)"
+                                                  mtime i-name version mode b-name machine-name u-secs))))))))
           (cl:end-of-file () nil))))
     (rename-file file (ensure-directories-exist
                        (merge-pathnames (make-pathname :name (pathname-name file))
