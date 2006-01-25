@@ -10,4 +10,4 @@ $SBCL --noinform --disable-debugger --noprint --userinit /dev/null --sysinit /de
 (sb-ext:quit)
 EOF
 
-;;; arch-tag: "076f5a21-c92c-4de3-b6bf-db6e792abb72"
+### arch-tag: "076f5a21-c92c-4de3-b6bf-db6e792abb72"
