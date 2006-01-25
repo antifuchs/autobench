@@ -19,18 +19,10 @@
    (cond
      ((release-p revision) t)
      (t (let* ((version-split (split-sequence:split-sequence #\. revision))
-               (minor-number (if (> 3 (length version-split))
+               (minor-number (if (> (length version-split) 3)
                                  (parse-integer (elt version-split 3))
                                  nil)))
           (and minor-number (zerop (mod minor-number n))))))))
-
-(defstrategy +sbcl-64+ sbcl (:mode (:arch :x86_64 :features ())))
-(defstrategy +sbcl-32+ sbcl (:mode (:arch :emulated-x86 :features ())))
-
-(defstrategy +sbcl-64-threaded+ sbcl (:mode (:arch :x86_64 :features (:sb-thread)))
-             :build-p (every-nth-revision 4))
-(defstrategy +sbcl-32-threaded+ sbcl (:mode (:arch :emulated-x86 :features (:sb-thread)))
-             :build-p (every-nth-revision 4))
 
 (defun map-over-versions-in-dir (function base-implementation strategies additional-predicate directory)
   (iterate (with implementation = (funcall #'make-instance base-implementation))
@@ -43,27 +35,25 @@
                     (when (and (funcall additional-predicate (impl-version s-impl)) (funcall (build-p strategy) (impl-version s-impl))) 
                       (funcall function s-impl dir)))))
 
-(defun build-and-benchmark-new (directory base-implementation strategies &key (additional-predicate (constantly t)))
+(defun build-and-benchmark-1 (base-implementation &key directory strategies (additional-predicate (constantly t)))
   (map-over-versions-in-dir
    (lambda (impl dir)
      (handler-case (progn
+                     (debug* "~&~A/~S: " impl (impl-mode impl))
                      (unless (implementation-already-built-p impl)
-                       (format *debug-io* "~&Building ~A with mode ~S: " impl (impl-mode impl))
+                       (debug* "Build:")
                        (build-in-directory impl dir)
-                       (format *debug-io* " OK ")
-                       (force-output *debug-io*))
+                       (debug* "OK "))
                      (import-release-into-db impl (implementation-release-date impl dir) (implementation-translated-mode impl))
-                     (format *debug-io* "BM~A:" *run-benchmark-n-times*)
-                     (force-output *debug-io*)
+                     (debug* "BM~A:" *run-benchmark-n-times*) 
                      (dotimes (i *run-benchmark-n-times*)
                        (run-benchmark impl)
-                       (format *debug-io* "~A" i)
-                       (force-output *debug-io*))
+                       (debug* "~A" i))
                      (read-benchmark-data *base-result-dir* (machine-instance)))
        (implementation-unbuildable ()
-	 (format t "can't build ~A~%" impl))
+	 (format *debug-io* "can't build ~A~%" impl))
        (program-exited-abnormally (c)
-         (format t "Something else went wrong when autobuilding/benchmarking ~A: ~A~%" impl c))))
+         (format *debug-io* "Something else went wrong when autobuilding/benchmarking ~A: ~A~%" impl c))))
    base-implementation strategies additional-predicate directory))
 
 (defun benchmark-versions (type versions &rest initargs)
@@ -72,5 +62,9 @@
            (dotimes (i *run-benchmark-n-times*)
 	     (run-benchmark impl))
            (read-benchmark-data *base-result-dir* (machine-instance))))
+
+(defun build-and-benchmark (&key (implementations (mapcar #'first *implementations-to-build*)))
+  (loop for implementation in implementations
+        do (apply #'build-and-benchmark-1 (assoc implementation *implementations-to-build* :test #'eql))))
 
 ;;; arch-tag: 1c76f71a-6a6c-4423-839f-46154ea259c2

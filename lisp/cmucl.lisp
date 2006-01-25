@@ -79,11 +79,9 @@
               if (not (null possible-dir)) do (return possible-dir))))))
 
 (defmethod implementation-release-date ((impl cmucl-snapshot) directory)
-  (let ((stat (sb-posix:stat (merge-pathnames (make-pathname :directory '(:relative "bin")
-                                                             :name "lisp")
-                                              directory))))
-    ;; XXX: Ew. I should factor unix-time-to-unversal-time from
-    ;; araneida-glue in autobench-web in here.
-    (+ 2208988800 (sb-posix:stat-mtime stat))))
+  (file-write-date
+   (merge-pathnames (make-pathname :directory '(:relative "bin")
+                                   :name "lisp")
+                    directory)))
 
 ;;; arch-tag: "96203cd3-bfff-425a-9da1-65670e870493"

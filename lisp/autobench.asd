@@ -9,10 +9,16 @@
     :depends-on (pg sb-posix split-sequence sb-md5 common-idioms iterate net-telent-date)
     :components ((:file "package")
 		 (:file "variables" :depends-on ("package"))
-		 (:file "txt-sql" :depends-on ("variables"))
+                 (:file "connection" :depends-on ("package" "variables"))
+                 (:file "util" :depends-on ("package" "variables"))
+                 (:file "txt-sql" :depends-on ("variables"))
 		 (:file "implementation" :depends-on ("variables"))
 		 (:file "sbcl" :depends-on ("variables" "implementation"))
                  (:file "cmucl" :depends-on ("variables" "implementation"))
-		 (:file "autobuilder" :depends-on ("implementation"))))
+		 (:file "autobuilder" :depends-on ("implementation" "util"))))
+
+(defmethod perform :after ((op load-op) (c (eql (find-system :autobench))))
+  (let ((init-file (symbol-value (intern "*USER-LOCAL-INIT-FILE*" :autobench))))
+    (funcall (intern "LOAD-INIT-FILE" :autobench))))
 
 ;;; arch-tag: "2522b003-ff5f-11d8-8b1b-000c76244c24"

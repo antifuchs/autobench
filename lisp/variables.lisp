@@ -1,42 +1,49 @@
 (in-package :autobench)
 
-(defmacro machine-ecase (&rest cases)
+(defmacro machine-case (&rest cases)
   "Selects forms based on the value returned by (MACHINE-INSTANCE).
-Usage is analogous to that of ECASE."
+Usage is analogous to that of CASE, except for the lack of an otherwise clause."
   `(cond
-    ,@(iterate (for (machine-name . forms) in cases)
-               (collect `((equal (machine-instance) ,machine-name) ,@forms)))
-    (t (error "Don't know which branch to use for machine name ~S" (machine-instance)))))
+    ,@(iterate (with had-otherwise = nil)
+               (for (machine-name . forms) in cases)
+               (if (eql machine-name 'otherwise)
+                   (progn
+                     (collect `(t ,@forms)
+                       into clauses)
+                     (setf had-otherwise t))
+                   (collect `((equal (machine-instance) ,machine-name) ,@forms)
+                     into clauses))
+               (finally (if had-otherwise
+                            (return clauses)
+                            (return (append clauses '((t nil)))))))))
 
+;;; activate debug messages
+(defparameter *debugging* t)
 
-;;; Connection to the SB-BENCH database
-(defun connect-to-database ()
-  (machine-ecase
-   ("walrus.boinkor.net" (pg-connect "sbcl-arch" "sbcl-arch"))
-   ("beaver" (pg-connect "asf" "asf"))
-   ("baker" (pg-connect "sbcl-arch" "sbcl-arch" :host #p"/tmp/"))))
+(defparameter *db-connection-setup-function* (machine-case ("baker" (constantly t)))
+  "A function used to prepare a DB connection.
+A remote autobench machine will have this set to #'ensure-ssh-tunnel-connected,
+and customize the variables documented in e-s-t-c's docstring.")
 
-(defparameter *dbconn* (connect-to-database))
+(defparameter *db-default-user-name* (machine-case
+                                      ("baker" "sbcl-arch")))
 
 ;;; base directory of the sb-bench installation
-(defparameter *base-dir* (machine-ecase
+(defparameter *base-dir* (machine-case
                           ("walrus.boinkor.net" #p"/home/sbcl-arch/autobench/")
                           ("beaver" #p"/home/asf/hack/sb-bench/")
                           ("baker" #p"/home/sbcl-arch/autobench/")))
 
 ;;; Machine-dependent stuff
-(defparameter *unpack-binary* (machine-ecase
+(defparameter *unpack-binary* (machine-case
                                 ("walrus.boinkor.net" "/usr/bin/gunzip") ; FreeBSD
-                                ("beaver" "/bin/gunzip")
-                                ("baker" "/bin/gunzip")))               ; Linux
-(defparameter *pack-binary* (machine-ecase
+                                (otherwise "/bin/gunzip")))              ; Linux
+(defparameter *pack-binary* (machine-case
                                 ("walrus.boinkor.net" "/usr/bin/gzip") 
-                                ("beaver" "/bin/gzip")
-                                ("baker" "/bin/gzip")))
-(defparameter *tla-binary* (machine-ecase
+                                (otherwise "/bin/gzip")))
+(defparameter *tla-binary* (machine-case
                             ("walrus.boinkor.net" "/usr/local/bin/tla")
-                            ("beaver" #p"/usr/bin/tla")
-                            ("baker" #p"/usr/bin/baz")))
+                            (otherwise #p"/usr/bin/baz")))
 
 (defparameter *tar-binary* #p"/usr/bin/tar")
 
@@ -46,13 +53,13 @@ To get any useful information on variance between benchmark runs,
 this should be >=3.")
 
 (defparameter *sbcl64-build-args* '("sbcl64 --userinit /dev/null --disable-debugger")
-  "The program that the SBCL build should use as a host compiler.
-For improved compilation speed, I recommend using CMUCL 18e (-:")
-
+  "64-bit native host compiler on baker.")
 
 (defparameter *sbcl32-build-args* '("'sbcl32 --userinit /dev/null --disable-debugger'")
-  "The program that the SBCL build should use as a host compiler.
-For improved compilation speed, I recommend using CMUCL 18e (-:")
+  "32-bit chroot host compiler.")
+
+(defparameter *sbcl-default-build-args* '("'sbcl --userinit /dev/null --disable-debugger'")
+  "Default sbcl host compiler.")
 
 
 (defparameter *cmucl-snapshot-format* "../cmucl-~2,1,0,'0@A-~2,1,0,'0@A-x86-FreeBSD.tar.bz2")
@@ -67,7 +74,33 @@ For improved compilation speed, I recommend using CMUCL 18e (-:")
                                                      *cl-bench-base*))
 (defparameter *version-translations-file* (merge-pathnames #p"version-translations.lisp-expr" *base-dir*))
 
+;;; autobuilding impls
+(defparameter *implementations-to-build* nil)
+
 ;;; for walrus:
 (defparameter *sbcl-developers* "asf@boinkor.net")
+
+;;; local init file
+(defvar *user-local-init-file* (merge-pathnames #p".autobench.lisp" (user-homedir-pathname)))
+
+(defun load-init-file ()
+  (when (probe-file *user-local-init-file*)
+    (let ((*package* (find-package "AUTOBENCH")))
+      (load *user-local-init-file*)))
+  ;; install sanity checks 
+  (check-setup))
+
+;;; setup error checks
+
+(defun check-setup ()
+  (when (or (null *base-dir*)
+            (not (probe-file *base-dir*)))
+    (error "No base directory set! Please customize *base-dir* in your ~~/.autobench.lisp and run (load-init-file) again."))
+  (unless *db-connection-setup-function*
+    (error "No DB connection setup function set. Please customize *db-connection-setup-function* in your ~~/.autobench.lisp and run (load-init-file) again."))
+  (unless *db-default-user-name*
+    (error "No database user name set! Please customize *db-default-user-name* in your ~~/.autobench.lisp and run (load-init-file) again."))
+  (unless *implementations-to-build*
+    (warn "You have not defined any lisp implementations to autobuild. Customize *implementations-to-build*.")))
 
 ;;; arch-tag: "25252978-ff5f-11d8-8b1b-000c76244c24"

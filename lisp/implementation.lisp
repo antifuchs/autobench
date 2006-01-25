@@ -59,14 +59,43 @@ To indicate that there is no next implementation available,
 return NIL."))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Architecture Protocol Some implementations need help when
+;;; running/building on different architectures. The methods on this
+;;; mixin use the MODE slot of an implementation to dispatch on the
+;;; architecture contained in it.
+
+(defclass architecture-mixin () ())
+
+(defgeneric build-in-directory/arch (implementation directory architecture)
+  (:documentation "Analogous to build-in-directory, build implementation in directory.
+Allows specialization on ARCH."))
+
+(defgeneric run-benchmark/arch (implementation architecture)
+  (:documentation "Analogous to run-benchmark, run benchmarks for implementation.
+Allows specialization on ARCH."))
+
+(defmethod build-in-directory ((implementation architecture-mixin) directory)
+  (destructuring-bind (&key arch &allow-other-keys) (impl-mode implementation)
+    (build-in-directory/arch implementation directory arch)))
+
+(defmethod run-benchmark ((implementation architecture-mixin))
+  (destructuring-bind (&key arch &allow-other-keys) (impl-mode implementation)
+    (run-benchmark/arch implementation arch)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Helper functions that methods in the implementation protocol may
 ;;; use and functions that our implementations may expect to be
 ;;; executed for them.
 
 (defmethod implementation-translated-mode ((impl implementation))
+  "Translates the mode of IMPL into a database-friendly string 
+that can be READ back."
   (format nil "~S" (impl-mode impl)))
 
 (defun implementation-cached-file-name (impl file-name)
+  "Returns the pathname of FILE-NAME as cached for versioned implementation
+IMPL."
+  ;; XXX: use probe-file??
   (make-pathname :directory (append (pathname-directory *version-cache-dir*)
 				    (list (impl-name impl) (md5-pathname-component (implementation-translated-mode impl))
                                           (impl-version impl)))
@@ -74,6 +103,8 @@ return NIL."))
 		 :type (pathname-type file-name)))
 
 (defmacro with-unzipped-implementation-files (implementation &body body)
+  "Ensures that the files requires to run IMPLEMENTATION are unzipped for as long as control is in BODY.
+Zips files back up again."
   (with-gensyms (impl-files impl file)
     `(let* ((,impl ,implementation)
 	    (,impl-files (implementation-required-files ,impl)))
@@ -85,6 +116,10 @@ return NIL."))
 	       do (pack-file ,impl (implementation-cached-file-name ,impl ,file)))))))
 
 (defmacro with-current-directory (dir &body body)
+  "Bind *d-p-d* to DIR and chdir there. The d-p-d binding 
+and the CWD change have dynamic extent.
+After control leaves BODY, chdirs back to the old value of *d-p-d*."
+  ;; XXX: first bind, then chdir??
   `(unwind-protect (progn
 		     (sb-posix:chdir ,dir)
 		     (let ((*default-pathname-defaults* ,dir))
@@ -190,7 +225,8 @@ return NIL."))
 (defun implementation-cached-zip-file-name (impl file-name)
   (let ((pn (implementation-cached-file-name impl file-name)))
     (make-pathname :directory (pathname-directory pn)
-		   ;; XXX: suboptimal. but I can't think of a better way right now.
+		   ;; XXX: suboptimal. but I can't think of a better way to fool
+                   ;; the pathname parser.
 		   :name (format nil "~A~@[.~A~]" (pathname-name pn) (pathname-type pn))
 		   :type "gz")))
 

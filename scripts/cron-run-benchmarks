@@ -1,0 +1,13 @@
+#!/bin/sh -e
+
+SBCL="${SBCL:-sbcl}"
+
+$SBCL --noinform --disable-debugger --noprint --userinit /dev/null --sysinit /dev/null <<EOF
+(require :asdf)
+(handler-bind ((style-warning #'muffle-warning))
+  (asdf:oos 'asdf:load-op :autobench :verbose nil))
+(autobench:build-and-benchmark)
+(sb-ext:quit)
+EOF
+
+;;; arch-tag: "076f5a21-c92c-4de3-b6bf-db6e792abb72"

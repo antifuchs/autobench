@@ -23,13 +23,13 @@
 
 (defun import-release-into-db (impl date mode)
   (ignore-pg-errors
-   (pg-exec *dbconn* (format nil "insert into impl values ('~A', (select max(field_offset)+2 from impl))" (impl-name impl))))
+   (pg-exec (db-connection) (format nil "insert into impl values ('~A', (select max(field_offset)+2 from impl))" (impl-name impl))))
   (ignore-pg-errors
-   (pg-exec *dbconn* (format nil "insert into version (i_name, version, release_date, is_release) values ('~A', '~A', ~A, ~A)"
+   (pg-exec (db-connection) (format nil "insert into version (i_name, version, release_date, is_release) values ('~A', '~A', ~A, ~A)"
                              (impl-name impl) (impl-version impl) date
                              (if (release-p (impl-version impl)) "TRUE" "FALSE"))))
   (ignore-pg-errors
-   (pg-exec *dbconn* (format nil "insert into build (v_name, v_version, mode) values ('~A', '~A', '~A')"
+   (pg-exec (db-connection) (format nil "insert into build (v_name, v_version, mode) values ('~A', '~A', '~A')"
                              (impl-name impl) (impl-version impl) mode))))
 
 (defun read-benchmark-data (dir machine-name)
@@ -44,8 +44,7 @@
         (handler-case
             (destructuring-bind (impl mode version &rest benchmark) (read s :eof-error-p nil)
               (destructuring-bind (i-name version) (translate-version (list impl version))
-                (let* ((stat (sb-posix:stat file))
-                       (mtime (sb-posix::stat-mtime stat)))
+                (let ((mtime (file-write-date file)))
                   ;; first, make sure the benchmark exists; we don't
                   ;; do this below, because we insert all values in
                   ;; one transaction. benchmarks should be inserted
@@ -54,15 +53,15 @@
                     (destructuring-bind (b-name r-secs u-secs &rest ignore) b
                       (declare (ignore r-secs ignore u-secs))
                       (ignore-pg-errors
-                       (pg-exec *dbconn* (format nil "insert into benchmark (name) values ('~A')" b-name)))))
-                  (with-pg-transaction *dbconn*
+                       (pg-exec (db-connection) (format nil "insert into benchmark (name) values ('~A')" b-name)))))
+                  (with-pg-transaction (db-connection)
                     (dolist (b benchmark)
                       (destructuring-bind (b-name r-secs u-secs &rest ignore) b
                         (declare (ignore r-secs ignore))
 				  
-                        (pg-exec *dbconn* (format nil "insert into result (date, v_name, v_version, mode, b_name, m_name, seconds) ~
-                                                       values (to_universal_time(~A::int4::abstime), '~A', '~A', '~A', '~A', '~A', ~f)"
-                                                  mtime i-name version mode b-name machine-name u-secs))))))))
+                        (pg-exec (db-connection) (format nil "insert into result (date, v_name, v_version, mode, b_name, m_name, seconds) ~
+                                                       values (~A, '~A', '~A', '~A', '~A', '~A', ~f)"
+                                                   mtime i-name version mode b-name machine-name u-secs))))))))
           (cl:end-of-file () nil))))
     (rename-file file (ensure-directories-exist
                        (merge-pathnames (make-pathname :name (pathname-name file))

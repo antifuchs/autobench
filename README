@@ -17,34 +17,13 @@ Autobench needs to run in SBCL as a host.
 Installation is similar to every other ASDFized package:
 
 symlink lisp/autobench.asd to one of your asdf:*central-repository*
-directories. Then, issue
+directories. Customize lisp/variables.lisp and issue
 
  (asdf:oos 'asdf:load-op :autobench)
 
 on the Lisp's REPL.
 
-In addition to the packages listed in the lisp/autobench.asd file,
-autobench requires a patched version of net-telent-date to support
-incremental autobuilding of SBCL. This patch, applied to the
-net-telent-date base directory will do the trick:
-
-diff -urN net-telent-date_0.41.timezoneless/parse-time.lisp net-telent-date_0.41/parse-time.lisp
---- parse-time.lisp	2005-02-10 09:02:05.000000000 +0100
-+++ parse-time.lisp	2004-10-03 23:11:18.000000000 +0200
-@@ -83,7 +83,8 @@
- 	    ("edt" . 4) ("cst" . 6)
- 	    ("cdt" . 5) ("mst" . 7)
- 	    ("mdt" . 6)	("pst" . 8)
--	    ("pdt" . 7)) 
-+	    ("pdt" . 7) ("cet" . -1)
-+            ("cest" . -2))
- 	  *zone-strings*)
- 
- (hashlist '(("yesterday" . yesterday)  ("today" . today)
-
-Next, edit lisp/variables.lisp and customize the variable values. The
-machine-ecase macro should help you customize autobench for many
-machines. Most interesting variables:
+interesting variables in variables.lisp:
 
  * *DBCONN* - specifies the connection to the database in which
     autobench stores benchmark results.
