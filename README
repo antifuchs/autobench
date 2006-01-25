@@ -1,67 +1,187 @@
-= Autobench, an incremental benchmark runner for lisp implementations =
+I've been promising to do this for a long time now. So, without further ado, here's the
 
-Autobench builds lisp implementations in version increments and runs
-benchmarks on the resulting images. It keeps a build archive
-consisting of every version that was built, to ease re-running of
-benchmarks. Autobench uses (and includes) the CL-BENCH suite published
-by Eric Marsden.
+Setting up an SBCL benchmark host HOWTO
+---------------------------------------
 
-Currently, autobench supports SBCL and CMUCL. There is a protocol for
-autobuilding/benchmarking lisp implementations, which makes adding
-support for a new implementation very easy.
+You, too, can run regular SBCL benchmarks (a.k.a
+[boinkmarks](http://sbcl-test.boinkor.net)) with the "Autobench"
+software package. It's similar in spirit to
+[buildbot](http://buildbot.sf.net), but it is focused at benchmarking
+cl implementations, so the abstractions are a bit different.
 
-== Installation ==
+### Getting the software ###
 
-Autobench needs to run in SBCL as a host.
+Autobench requires a recent SBCL release. I've built and tested it
+with 0.9.8. It also requires a development version of Bazaar (version
+1, not bzr).
 
-Installation is similar to every other ASDFized package:
+Also, it requires a strong cpu, lots of diskspace for the build
+archive (around 8.7 GB if you build & benchmark all sbcl 0.8 and 0.9
+revisions) and a good stomach that doesn't hurt when you run into one
+of my stupid bugs.
 
-symlink lisp/autobench.asd to one of your asdf:*central-repository*
-directories. Customize lisp/variables.lisp and issue
+If you have all that,
 
- (asdf:oos 'asdf:load-op :autobench)
+* Get&install canonical's bazaar1 implementation at [the bazaar
+  wiki](http://bazaar.canonical.com/Downloads). I strongly recommend
+  getting a "Development" tarball, as the 1.4 release has a very bad
+  bug concerning updates to a specific revision, which the sbcl build
+  process uses. Get the debian packages or the mac os x build, these
+  are fine.
 
-on the Lisp's REPL.
+* Register the autobench archive:
+  `$ baz register-archive http://boinkor.net/lisp/boinkmarks@boinkor.net--2005`
 
-interesting variables in variables.lisp:
+* Get the sources and link them to your ~/.sbcl/systems/:
+  * `$ baz get boinkmarks@boinkor.net--2005/boinkmarks--main--0 autobench`
+  * `$ ln -sf $(pwd)/autobench/lisp/autobench.asd ~/.sbcl/systems/`
 
- * *DBCONN* - specifies the connection to the database in which
-    autobench stores benchmark results.
+* Get its dependencies:
+  * [common-idioms](http://cliki.net/common-idioms) (asdf-installable)
+  * [iterate](http://cliki.net/iterate) (asdf-installable)
+  * [net-telent-date](http://cliki.net/net-telent-date) (asdf-installable)
+  * [pg](http://cliki.net/pg) (get the [CVS](http://common-lisp.net/project/pg/) version!)
 
- * *BASE-DIR* - specifies the directory in which you installed
-    autobench.
+Great! You're almost ready to go. If you try loading the autobench system
+with asdf now, it will give you an error message telling you to
+customize your ~/.autobench.lisp file. And that's just what we're
+going to do now.
 
- * *PACK-BINARY* and *UNPACK-BINARY* - binaries that we use to
-    compress / uncompress the required files for a lisp implementation
-    in the build archive.
+### Customizing ~/.autobench.lisp for your machine ###
 
- * *RUN-BENCHMARK-N-TIMES* - the number of times to run bechmarks for
-    each revision. Meaningful statistics can be extracted from 3 or
-    more runs.
+As I mentioned, we're going to create an .autobench.lisp file
+now. Here's a sample customisation file for an x86-64 machine:
 
- * *TLA-BINARY* - the tla (tom lord's arch) binary used to
-    incrementally update SBCL builds.
 
-== Usage ==
+     ;;; SIMPLE (important) CUSTOMIZABLE VARIABLES.
+     ;; The directory where you checked out the autobench source.
+     (setf *base-dir* #p"/home/sbcl-arch/autobench/")
 
-After customizing stuff in lisp/variables.lisp, you can start using
-autobench. There are a few ways you can use it:
+     
+     ;;; BUILD STRATEGIES
+     (defstrategy +sbcl-64+ sbcl (:mode (:arch :x86_64 :features ())))
+     (defstrategy +sbcl-32+ sbcl (:mode (:arch :emulated-x86 :features ())))
 
- * automatically build & benchmark SBCL:
+     (defstrategy +sbcl-64-threaded+ sbcl (:mode (:arch :x86_64 :features (:sb-thread)))
+                  :build-p (every-nth-revision 4))
+     (defstrategy +sbcl-32-threaded+ sbcl (:mode (:arch :emulated-x86 :features (:sb-thread)))
+                  :build-p (every-nth-revision 4))
 
-   1. check out an older revision SBCL (the one you want to start
-      benchmarking from) from the arch archive at
-      http://sbcl.boinkor.net into a directory of your choice.
-   2. run (autobench:build-and-benchmark-new 'autobench:sbcl #P"/path/to/the/directory/")
-      (don't forget the forward slash)
-   3. wait some time (-:
 
- * benchmark pre-built images of implementations:
+     ;;; implementations that should be automatically built. supports only sbcl right now.
+     (setq *implementations-to-build* `((sbcl :directory #p"/home/sbcl-arch/space/autobench/+newest-64/"
+                                              :strategies (,+sbcl-32+ ,+sbcl-32-threaded+
+                                              ,+sbcl-64+ ,+sbcl-64-threaded+))))
 
-   1. copy the required files for the implementation (typically the
-      binary and a core file) into
-      *VERSION-CACHE-DIR*/<implementation>/<version>/.
-   2. run (benchmark-versions 'autobench:<implementation> '(<version> <version2> ...))
+     
+     ;;; POSTGRES DB SSH TUNNEL VARIABLES
+     ;; The function used to ensure the database connection can be established.
+     ;; This is different from actually establishing the db connection:
+     ;; Think of it as a cheap :before method/hook (:
+     (setf *db-connection-setup-function* #'ensure-ssh-tunnel-connected)
 
-   You can also perform the second step if you want to re-run
-   benchmarks for a particular implementation.
+     ;; The user name to use for connections to the data base.
+     (setf *db-default-user-name* "test-db-user")
+
+     ;; The default port for ssh forwards is 5096.
+     ;; Uncomment if this port is in use on your autobuild machine.
+     ;; (setf *ssh-port* 5096)
+
+     ;; The user name to use for the ssh connection that establishes the tunnel
+     ;; to the boinkmarks DB host.
+     (setf *ssh-remote-username* *db-default-user-name*) ; typically the same. customize if they're not.
+
+     
+
+
+While this may look like a lot at first reading, it's nothing compared to, say, `sendmail.cf` (-:
+
+The one really important variable is `*base-dir*`. if you fail to set
+it correctly, autobench will autobelch directories left and right. Try
+the pathname with probe-file first. (:
+
+I'll cover the build strategies in the next section, and the postgres
+DB ssh tunnel variables in the one titled "connecting to the
+boinkmarks db".
+
+#### Build Strategies ####
+
+The things that control how SBCL is built are called build strategies. They're defined via defstrategy like so:
+
+     (defstrategy +strategy-name+ implementation-name
+                  (;; initargs, for example:
+                   :mode (:arch architecture :features (:sb-thread))
+                  [:build-p build-p])
+
+This defines a variable bound to a strategy object, which you can then use on *implementations-to-build*.
+
+Valid names for implementation-name (which isn't evaluated, btw) are SBCL only at the moment.
+
+The :mode init argument is pretty interesting. Let's have a closer
+look at it. `Architecture` says which arch to build for. SBCL needs a
+bit of hand-holding to build in the x86 emulation on amd64
+machines. See sbcl.lisp, `build-implementation/arch` methods for
+details. `Features` are the features that should be put into
+customize-target-features.lisp during the build process.
+
+Finally, `build-p` is a function that is called with a version number
+and returns t or nil, indicating that the release should be built and
+benchmarked or not. The function (every-nth-release n) returns a test
+function that returns T for every sbcl release and for every n-th cvs
+version of SBCL.
+
+Note that you shouldn't change the strategies, once you ran builds and
+benchmarks with them, and imported the results into a database.
+
+
+
+#### Connecting to the Boinkmarks DB ####
+
+You do that by sending [me](mailto:asf@boinkor.net) a signed e-mail stating:
+
+* Your desired username
+
+* An SSH public key (the private key should have no password and should be installed in the autobenching user's home directory)
+
+* The output of (machine-instance) and (machine-type), when run on an SBCL 0.9.8 (or later) prompt.
+
+* The DEFSTRATEGY forms in your ~/.autobench.lisp (alternatively, you
+  state that you don't know what you should put there and then we can
+  discuss them (-:)
+
+When you sent me all that, I'll create your account. (For ssh tunnels
+only. No shells from me. If you want one, ask the
+[cl.net](http://common-lisp.net) or [tech.coop](http://tech.coop)
+guys.) Also, I'll perform the required foreign keys voodoo with your
+build strategies so that you can import the build results.
+
+When I've created your account, I'll send you an acknowledgement, and
+you can start...
+
+### Auto-Building SBCL ###
+
+The SBCL autobuilder uses [the sbcl arch
+archive](http://boinkor.net/SBCL-in-arch.html) as a changeset
+source. Good thing you got bazaar in the previous steps, right?
+
+* Register the archives:
+  * `$ for i in 4-2 5 ; do baz register-archive http://sbcl.boinkor.net/sbcl@boinkor.net--200$i/ ; done`
+
+* check out (e.g. the first sbcl 0.9.0 revision):
+  * `$ baz get sbcl@boinkor.net--2005/sbcl--main--0.9--base-0 /wherever/sbcl-0.9`
+
+* Use `/wherever/sbcl-0.9/` as the directory on *implementations-to-build* in your ~/.autobench.lisp.
+
+* Try to build a few revisions on the command line:
+  * `$ /autobench-base-dir/scripts/cron-run-benchmarks`
+  * Hit ctrl-c if it works. If not, see `/autobench-base-dir/+log/`
+    for logs of every command that failed (i.e. returned non-0 exit
+    status).
+  
+* Set up a cron job to execute *base-dir*"/scripts/cron-run-benchmarks" every day on 0:00:
+   * `$ crontab -e`
+   * add the line `@daily       wherever/scripts/cron-run-benchmarks`
+
+You're done! Now you can watch your build archive grow and (hopefully)
+pretty graphs on
+[http://sbcl-test.boinkor.net/bench/](http://sbcl-test.boinkor.net/bench/)!
