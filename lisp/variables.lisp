@@ -64,21 +64,32 @@ this should be >=3.")
 
 (defparameter *cmucl-snapshot-format* "../cmucl-~2,1,0,'0@A-~2,1,0,'0@A-x86-FreeBSD.tar.bz2")
 ;;; pathnames
-(defparameter *cl-bench-base* (merge-pathnames #p"cl-bench/" *base-dir*))
-(defparameter *log-directory* (merge-pathnames #p"+log/" *base-dir*))
-(defparameter *version-cache-dir* (merge-pathnames #p"+build-archive/" *base-dir*))
-(defparameter *www-base* (merge-pathnames #p"www/" *base-dir*))
-(defparameter *base-result-dir* (merge-pathnames (make-pathname :directory `(:relative "+to-import" ,(machine-instance)))
-                                                 *cl-bench-base*))
-(defparameter *archived-result-dir* (merge-pathnames (make-pathname :directory `(:relative "+to-import" "old" ,(machine-instance)))
-                                                     *cl-bench-base*))
-(defparameter *version-translations-file* (merge-pathnames #p"version-translations.lisp-expr" *base-dir*))
+(defparameter *cl-bench-base* nil)
+(defparameter *log-directory* nil)
+(defparameter *version-cache-dir* nil)
+(defparameter *www-base* nil)
+(defparameter *base-result-dir* nil)
+(defparameter *archived-result-dir* nil)
+(defparameter *version-translations-file* nil)
 
 ;;; autobuilding impls
 (defparameter *implementations-to-build* nil)
 
 ;;; for walrus:
 (defparameter *sbcl-developers* "asf@boinkor.net")
+
+;;; pathnames
+
+(defun set-base-pathnames ()
+  (setf *cl-bench-base* (merge-pathnames #p"cl-bench/" *base-dir*))
+  (setf *log-directory* (merge-pathnames #p"+log/" *base-dir*))
+  (setf *version-cache-dir* (merge-pathnames #p"+build-archive/" *base-dir*))
+  (setf *www-base* (merge-pathnames #p"www/" *base-dir*))
+  (setf *base-result-dir* (merge-pathnames (make-pathname :directory `(:relative "+to-import" ,(machine-instance)))
+                                                   *cl-bench-base*))
+  (setf *archived-result-dir* (merge-pathnames (make-pathname :directory `(:relative "+to-import" "old" ,(machine-instance)))
+                                                       *cl-bench-base*))
+  (setf *version-translations-file* (merge-pathnames #p"version-translations.lisp-expr" *base-dir*)))
 
 ;;; local init file
 (defvar *user-local-init-file* (merge-pathnames #p".autobench.lisp" (user-homedir-pathname)))
@@ -88,7 +99,8 @@ this should be >=3.")
     (let ((*package* (find-package "AUTOBENCH")))
       (load *user-local-init-file*)))
   ;; install sanity checks 
-  (check-setup))
+  (check-setup)
+  (set-base-pathnames))
 
 ;;; setup error checks
 
