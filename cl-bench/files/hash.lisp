@@ -14,10 +14,7 @@
           :count (length l))))
 
 (defun run-slurp-lines ()
-  (cond ((probe-file "/usr/share/dict/words")
-         (read-many-lines "/usr/share/dict/words"))
-        ((probe-file "/usr/dict/words")
-         (read-many-lines "/usr/dict/words"))))
+  (read-many-lines "slurpable-file"))
 
 
 

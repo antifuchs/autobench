@@ -96,19 +96,19 @@
         "--boink-core-file" (shellquote (namestring (implementation-cached-file-name impl "sbcl.core")) shell-quote-p)
         "--boink-implementation-type" (shellquote (implementation-translated-mode impl) shell-quote-p)))
 
-(defmethod run-benchmark/arch (impl (arch (eql :emulated-x86)))
+(defmethod run-benchmark/arch ((impl sbcl) (arch (eql :emulated-x86)))
   (with-unzipped-implementation-files impl
     (invoke-logged-program "bench-sbcl" (merge-pathnames #p"scripts/run-in-32bit" *base-dir*)
                            `("./run-sbcl.sh" ,@(prepare-bench-sbcl-cmdline impl t))
                            :environment (prepare-sbcl-environment))))
 
-(defmethod run-benchmark/arch (impl (arch (eql :x86_64)))
+(defmethod run-benchmark/arch ((impl sbcl) (arch (eql :x86_64)))
   (with-unzipped-implementation-files impl
     (invoke-logged-program "bench-sbcl" "/usr/bin/env"
                            `("./run-sbcl.sh" ,@(prepare-bench-sbcl-cmdline impl nil))
                            :environment (prepare-sbcl-environment))))
 
-(defmethod run-benchmark/arch (impl (arch (eql :x86)))
+(defmethod run-benchmark/arch ((impl sbcl) arch)
   (with-unzipped-implementation-files impl
     (invoke-logged-program "bench-sbcl" "/usr/bin/env"
                            `("./run-sbcl.sh" ,@(prepare-bench-sbcl-cmdline impl nil))
