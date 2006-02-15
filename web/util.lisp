@@ -1,6 +1,6 @@
 (in-package :autobench-web)
 
-(defparameter *debugging-sql* (autobench::machine-ecase
+(defparameter *debugging-sql* (autobench::machine-case
                            ("walrus.boinkor.net" nil)
                            ("baker" nil)
                            ("beaver" t)))

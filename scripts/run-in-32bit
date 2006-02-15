@@ -1,3 +1,10 @@
 #!/bin/bash
 
-/usr/bin/linux32 --3gb /usr/bin/dchroot -d "$@" 2>&1
+
+all_args=""
+# recent dchroots want the program&args in a single argument. woo yay. /-:
+for arg in "$@" ; do
+    all_args="$all_args $arg"
+done
+
+/usr/bin/linux32 --3gb /usr/bin/dchroot -d "$all_args" 2>&1

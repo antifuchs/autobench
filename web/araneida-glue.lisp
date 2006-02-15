@@ -197,7 +197,12 @@
               (string-downcase (format nil "~A~@[/~S~]" arch features))))))
 
 (defun emit-image-index (s &rest args &key host only-release implementations &allow-other-keys)
-  (let* ((benchmarks (pg-result (pg-exec *dbconn* "select distinct b_name, unit from result join benchmark on name=b_name order by b_name") :tuples))
+  (let* ((benchmarks (pg-result (pg-exec *dbconn*
+                                         (translate* `(distinct (select (b-name unit)
+                                                                        (where
+                                                                         (join result benchmark
+                                                                               :on (= result.b_name benchmark.name))
+                                                                         (= result.m-name ,host)))))) :tuples))
          (date-boundaries (apply #'date-boundaries args))
          (earliest (first date-boundaries))
          (latest (second date-boundaries)))
