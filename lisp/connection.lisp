@@ -19,14 +19,19 @@
 When using this function to connect to autobench, make sure you got an ssh user name from
 the DB maintainer, installed the public key in the right place, and have customized
 *ssh-remote-username* and *ssh-port* correctly."
-  (if (and *ssh-tunnel* (sb-ext:process-p *ssh-tunnel*) (sb-ext:process-alive-p *ssh-tunnel*))
-      *ssh-tunnel*
-      (setf *ssh-tunnel*
-            (sb-ext:run-program "/usr/bin/ssh"
-                                `("-o" "BatchMode=yes" "-CNL" ,(format nil "~A:~A:~A" *ssh-port* host port) "-T"
-                                       "-u" ,remote-username ,*ssh-tunnel-host*)
-                                :output nil :input nil :error nil
-                                :wait nil))))
+  (cond
+    ((and *ssh-tunnel* (sb-ext:process-p *ssh-tunnel*) (sb-ext:process-alive-p *ssh-tunnel*))
+     *ssh-tunnel*)
+    (t (setf *ssh-tunnel*
+             (sb-ext:run-program "/usr/bin/ssh"
+                                 `("-o" "BatchMode=yes" "-L" ,(format nil "~A:~A:~A" *ssh-port* host port) "-T"
+                                        "-l" ,remote-username ,*ssh-tunnel-host* "cat")
+                                 :output :stream :input :stream :error *debug-io*
+                                 :wait nil))
+       (format (process-input *ssh-tunnel*) "hello world~%")
+       (finish-output (process-input *ssh-tunnel*))
+       (read-line (process-output *ssh-tunnel*))
+       *ssh-tunnel*)))
 
 (defun teardown-ssh-tunnel ()
   (when (and (sb-ext:process-p *ssh-tunnel*)
