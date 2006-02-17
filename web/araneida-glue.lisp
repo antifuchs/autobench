@@ -85,7 +85,7 @@
                      (<= v.release-date ,latest))
                `(or is-release
                     (>= v.release-date ,latest)))
-          (= m-name ,host)
+          (in m-name ',host)
           (in b.v-name ',(mapcar #'implementation-spec-impl implementations))
           (in b.mode ',(mapcar #'implementation-spec-mode implementations)))))
 
@@ -95,47 +95,51 @@
   (make-pathname :directory `(:relative ,(filesys-escape-name
                                           (md5-pathname-component
                                            (prin1-to-string implementations)))
-                                        ,host
+                                        ,(filesys-escape-name
+                                          (md5-pathname-component
+                                           (prin1-to-string host)))
                                         ,(if only-release only-release "all"))
                  :name (filesys-escape-name benchmark)))
 
 (defun make-offset-table (&rest conditions)
   (let ((table (make-hash-table :test #'equal)))
     (values table
-            (iterate (for (impl) in-relation
+            (iterate (for (impl host) in-relation
                   (translate*
-                   `(distinct (select ((++ b.v-name "," b.mode))
+                   `(distinct (select ((++ b.v-name "," b.mode) r.m-name)
                                       (order-by
                                        ,(apply #'emit-where-clause conditions)
                                        ((++ b.v-name "," b.mode)) :desc))))
                   on-connection *dbconn*)
              (for offset from 0)
              (maximizing offset)
-             (setf (gethash impl table) offset)))))
+             (setf (gethash (list impl host) table) offset)))))
 
 (defun ploticus-offset-args (offset-table)
-  (iterate (for (impl offset) in-hashtable offset-table)
+  (iterate (for ((impl host) offset) in-hashtable offset-table)
            (for pl-s = (if (= offset 0) "" (+ 2 (truncate offset 2))))
            ;; "name=SBCL" "y=2" "err=3" "name2=CMU Common Lisp" "y2=4" "err2=5"
-           (collect (format nil "name~A=~A" pl-s (pprint-impl-and-mode impl)))
+           (collect (format nil "name~A=~A/~A" pl-s host (pprint-impl-and-mode impl)))
            (collect (format nil "y~A=~A" pl-s (+ 2 (* 2 offset))))
            (collect (format nil "err~A=~A" pl-s (+ 3 (* 2 offset))))))
 
 (defun generate-image-for (&rest conditions &key unit &allow-other-keys)
+  (declare (optimize (speed 0) (space 0)
+                     (debug 2)))
   (multiple-value-bind (offset-table max-offset) (apply #'make-offset-table conditions)
     (let ((filename (merge-pathnames (apply #'file-name-for conditions) *prefab-base*)))
 
       (with-open-file (f (ensure-directories-exist filename) :direction :output
                          :if-exists :supersede :if-does-not-exist :create)
-        (iterate (for (date name version mean stderr) in-relation
-                      (translate* `(select (v.release-date (++ b.v-name "," b.mode) v.version
+        (iterate (for (date host name version mean stderr) in-relation
+                      (translate* `(select (v.release-date r.m-name (++ b.v-name "," b.mode) v.version
                                                            (avg r.seconds) (/ (stddev r.seconds) (sqrt (count r.seconds))))
                                            (order-by
                                             (group-by ,(apply #'emit-where-clause conditions)
-                                                      (v.release-date (++ b.v-name "," b.mode) v.version))
+                                                      (v.release-date r.m-name (++ b.v-name "," b.mode) v.version))
                                             (v.release-date))))
                       on-connection *dbconn*)
-                 (for offset = (gethash name offset-table))
+                 (for offset = (gethash (list name host) offset-table))
                  (format f "~A~A~f~A~f~A~%"
                          version
                          (make-string (1+ (* 2 offset)) :initial-element #\Tab)
@@ -164,8 +168,7 @@
   (let ((filename (merge-pathnames (apply #'file-name-for conditions) *prefab-base*)))
     (unless (and (probe-file filename)
                  (probe-file (make-pathname :type "png" :defaults filename))
-                 (>= (unix-time-to-universal-time (sb-posix:stat-mtime (sb-posix:stat filename)))
-                     *latest-result*))
+                 (>= (file-write-date filename) *latest-result*))
       (apply #'generate-image-for conditions))))
 
 (defun url-for-image (&rest conditions)
@@ -182,7 +185,7 @@
             (translate* `(select ((min release-date) (max release-date))
                                  (where (join version result
                                               :on (and (= result.v-name version.i-name) (= v-version version)))
-                                        (and (= m-name ,host)
+                                        (and (in m-name ',host)
                                              ,(if only-release
                                                   `(like version (++ ,only-release ".%"))
                                                   t))))))
@@ -202,7 +205,7 @@
                                                                         (where
                                                                          (join result benchmark
                                                                                :on (= result.b_name benchmark.name))
-                                                                         (= result.m-name ,host)))))) :tuples))
+                                                                         (in result.m-name ',host)))))) :tuples))
          (date-boundaries (apply #'date-boundaries args))
          (earliest (first date-boundaries))
          (latest (second date-boundaries)))
@@ -224,52 +227,72 @@
           (h2 "Displaying " ,(if only-release (format nil "release ~A" only-release) "all releases")))
          ((div :id "sidebar")
           ((form :method :get :action ,(urlstring *index-url*))
-           ((input :type "hidden" :value ,host :name :host))
            (h2 "Machine")
            (ul
-            ,@(iterate (for (machine arch) in-relation
-                            (translate* `(distinct (select (m-name type) (join result machine
-                                                                          :on (= result.m-name machine.name)))))
-                            on-connection *dbconn*)
-                       (collect `(li ((a :href ,(format nil "~A?host=~A" (urlstring *index-url*) machine)
-                                         ,@(if (equal host machine)
-                                               (list :class "selected")
-                                               ()))
-                                      ,(format nil "~A | ~A" machine arch))))))
+            ,(make-multi-select :host host
+                                (iterate (for (machine arch) in-relation
+                                              (translate* `(distinct (select (m-name type) (join result machine
+                                                                                                 :on (= result.m-name machine.name)))))
+                                              on-connection *dbconn*)
+                                         (collect `(,machine ,(format nil "~A | ~A" machine arch))))))
            (h2 "Version")
            ,(make-multi-select :implementations implementations
                                (mapcar (lambda (impl) (list impl (pprint-impl-and-mode impl))) (all-implementations-of-host host)))
            (h2 "Release")
            ,(make-select :only-release only-release
-                         (cons '(nil "All releases")
-                               (iterate (for (version date steps) in-relation
-                                             (translate*
-                                              `(select (v.version v.release-date (+ 1 (count v2.version)))
-                                                       (order-by
-                                                        (group-by (where (join (as version v)
-                                                                               (as version v2)
-                                                                               :on (and (= v.i-name v2.i-name)
-                                                                                        (like v2.version (++ v.version ".%"))))
-                                                                         (exists (select (*)
-                                                                                         (where (as result r)
-                                                                                                (and (= r.m-name ,host)
-                                                                                                     (= r.v-name v.i-name)
-                                                                                                     (= r.v-version v2.version))))))
-                                                                  (v.version v.release-date))
-                                                        (v.release-date)))) 
-                                             on-connection *dbconn*)
-                                        (collect `(,version ,(format nil "~A (~A)" version steps))))))
-           ((input :type :submit))
+                         `((nil "All releases")
+                           ,@(iterate (for (version date steps) in-relation
+                                           (translate*
+                                            `(select (version release-date n-revisions)
+                                                     (join
+                                                      ;; find out number of sub-revisions for every release;
+                                                      ;; be careful, sbcl-release-for-version isn't very robust.
+                                                      (alias
+                                                       (select ((as (count *) n-revisions) (as (sbcl_release_for_version ver.version) release))
+                                                               (having
+                                                                (group-by (where (as version ver)
+                                                                                 (in (sbcl_release_for_version ver.version)
+                                                                                     (distinct
+                                                                                      (select (version)
+                                                                                              (where (join version result
+                                                                                                           :on (and (= v-version version)
+                                                                                                                    (= v-name i-name)))
+                                                                                                     is-release)))))
+                                                                          ((sbcl_release_for_version ver.version)))
+                                                                (> (count *) 1)))
+                                                       releasecount)
+                                                      (alias
+                                                       (select (version release-date)
+                                                               version)
+                                                       version-date)
+                                                      :on (= version release))))
+                                           on-connection *dbconn*)
+                                      (collect `(,version ,(format nil "~A (~A)" version steps))))))
+           (p
+            ((input :type :submit :value "Graph")))
            (h2 "Syndicate (atom 1.0)")
            (ul
-            ,@(iterate (for (machine impl) in-relation
+            ,@(iterate (for (machine impl mode) in-relation
                             (translate*
                              `(distinct
-                               (select (m_name (++ v_name "," mode)) result)))
+                               (select (machine-support.m-name build.v-name build.mode)
+                                       (order-by
+                                        (where
+                                         (join build
+                                               machine-support
+                                               :on (and (= machine-support.i-name build.v-name) (= machine-support.mode build.mode)))
+                                         (exists
+                                          (limit
+                                           (select (*)
+                                                   (where result
+                                                          (and (= machine-support.i-name result.v-name) (= build.v-version result.v-version)
+                                                               (= machine-support.m-name result.m-name) (= build.mode result.mode))))
+                                           :end 1)))
+                                        (m-name v-name mode)))))
                             on-connection *dbconn*)
                        (collect `(li
-                                  ((a :href ,(format nil "~A?HOST=~A&IMPLEMENTATION=~A" (urlstring *atom-url*) machine impl))
-                                   ,(format nil "~A/~A" machine (pprint-impl-and-mode impl)))))))))
+                                  ((a :href ,(format nil "~A?HOST=~A&IMPLEMENTATION=~A,~A" (urlstring *atom-url*) machine impl mode))
+                                   ,(format nil "~A/~A" machine (pprint-impl-and-mode (format nil "~A,~A" impl mode))))))))))
          ((div :id "content")
           ,@(iterate (for (benchmark unit) in benchmarks)
                      (for (values image-url filename) = (apply #'url-for-image
@@ -319,7 +342,7 @@
                                                    :on (and (= result.m-name machine-support.m-name)
                                                             (= result.v-name machine-support.i-name)
                                                             (= result.mode machine-support.mode)))
-                                             (and (= ,host result.m-name)
+                                             (and (in result.m-name ',host)
                                                   ,@(if preferred-only
                                                         '(preferred)
                                                         nil))))))
@@ -332,21 +355,24 @@
        (pg-disconnect ,connection))))
 
 (defmethod handle-request-response ((handler index-handler) method request)
-  (with-db-connection *dbconn*
-    (let ((*latest-result* (first (pg-result (pg-exec *dbconn* "select max(date) from result") :tuple 0))))
-      (request-send-headers request
-                            :expires  (+ 1200 (get-universal-time))
-                            :last-modified *latest-result*
-                            :conditional t) 
-      (let ((s (request-stream request)))
-        (format s "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\" \"http://www.w3.org/TR/html4/loose.dtd\">")
-        (param-bind ((host "baker")
-                     (only-release nil)
-                     (implementations (all-implementations-of-host host t) t)) request
-          (emit-image-index s
-                            :implementations implementations
-                            :only-release only-release
-                            :host host))))))
+  (handler-bind ((sb-ext:timeout #'(lambda (c)
+                                     (format *debug-io* "Caught timeout ~A. continuing...~%" c)
+                                     (invoke-restart (find-restart 'continue c)))))
+    (with-db-connection *dbconn*
+      (let ((*latest-result* (first (pg-result (pg-exec *dbconn* "select max(date) from result") :tuple 0))))
+        (request-send-headers request
+                              :expires  (+ 1200 (get-universal-time))
+                              :last-modified *latest-result*
+                              :conditional t) 
+        (let ((s (request-stream request)))
+          (format s "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\" \"http://www.w3.org/TR/html4/loose.dtd\">")
+          (param-bind ((host (list "baker") t)
+                       (only-release nil)
+                       (implementations (all-implementations-of-host host t) t)) request
+            (emit-image-index s
+                              :implementations implementations
+                              :only-release only-release
+                              :host host)))))))
 
 (defun make-select (name default options)
   `((select :name ,name)
