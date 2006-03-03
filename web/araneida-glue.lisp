@@ -148,16 +148,14 @@
                          stderr
                          (make-string (- max-offset offset) :initial-element #\Tab))))
       (autobench::invoke-logged-program "gen-image" *ploticus-binary*
-                                        (print
-                                         `("-png" "-o" ,(namestring (make-pathname :type "png" :defaults filename)) "-prefab" "lines"
-                                                  ,(format nil "data=~A" (namestring filename)) "delim=tab" "x=1"
-                                                  "ygrid=yes" "xlbl=version" ,(format nil "ylbl=~A" unit) "cats=yes" "-pagesize" "15,8" "autow=yes"
-                                                  "yrange=0"
-                                                  "ylog=log"
-                                                  ;; "ynearest=0.5" ; works better with linear scale.
-                                                  "stubvert=yes"
-                                                  ,@(ploticus-offset-args offset-table))
-                                         *debug-io*)))))
+                                        `("-png" "-o" ,(namestring (make-pathname :type "png" :defaults filename)) "-prefab" "lines"
+                                                 ,(format nil "data=~A" (namestring filename)) "delim=tab" "x=1"
+                                                 "ygrid=yes" "xlbl=version" ,(format nil "ylbl=~A" unit) "cats=yes" "-pagesize" "15,8" "autow=yes"
+                                                 "yrange=0"
+                                                 "ylog=log"
+                                                 ;; "ynearest=0.5" ; works better with linear scale.
+                                                 "stubvert=yes"
+                                                 ,@(ploticus-offset-args offset-table))))))
 
 (defun unix-time-to-universal-time (unix-time)
   (declare (integer unix-time))
@@ -180,16 +178,37 @@
 
 (defun date-boundaries (&rest conditions &key host only-release &allow-other-keys)
   (declare (ignore conditions))
-  (pg-result
-   (pg-exec *dbconn*
-            (translate* `(select ((min release-date) (max release-date))
-                                 (where (join version result
-                                              :on (and (= result.v-name version.i-name) (= v-version version)))
-                                        (and (in m-name ',host)
-                                             ,(if only-release
-                                                  `(like version (++ ,only-release ".%"))
-                                                  t))))))
-   :tuple 0))
+  (destructuring-bind (i-name first last-unreleased)
+      (pg-result
+       (pg-exec *dbconn*
+                (translate*
+                 `(select (version.i-name (min release-date) (max release-date))
+                          (group-by (where (join version result
+                                                 :on (and (= result.v-name version.i-name) (= v-version version)))
+                                           (and (in m-name ',host)
+                                                ,(if only-release
+                                                     `(= ,only-release (sbcl_release_for_version version))
+                                                     t)))
+                                    (version.i-name)))))
+       :tuple 0)
+    (cond
+      (only-release
+       (destructuring-bind (&optional last-released)
+           (pg-result
+            (pg-exec *dbconn*
+                     (translate*
+                      `(select (release-date)
+                               (limit
+                                (order-by (where (join version result
+                                                       :on (and (= result.v-name version.i-name) (= v-version version)))
+                                                 (and (in m-name ',host)
+                                                      (= i-name ,i-name)
+                                                      (> release-date ,last-unreleased)))
+                                          (release-date))
+                                :end 1))))
+            :tuple 0)
+         (list first (or last-released last-unreleased))))
+      (t (list first last-unreleased)))))
 
 (defun pprint-impl-and-mode (impl-string)
   (let ((impl (implementation-spec-impl impl-string))
@@ -235,7 +254,7 @@
                                                                                                  :on (= result.m-name machine.name)))))
                                               on-connection *dbconn*)
                                          (collect `(,machine ,(format nil "~A | ~A" machine arch))))))
-           (h2 "Version")
+           (h2 "Implementation")
            ,(make-multi-select :implementations implementations
                                (mapcar (lambda (impl) (list impl (pprint-impl-and-mode impl))) (all-implementations-of-host host)))
            (h2 "Release")
@@ -244,28 +263,30 @@
                            ,@(iterate (for (version date steps) in-relation
                                            (translate*
                                             `(select (version release-date n-revisions)
-                                                     (join
-                                                      ;; find out number of sub-revisions for every release;
-                                                      ;; be careful, sbcl-release-for-version isn't very robust.
-                                                      (alias
-                                                       (select ((as (count *) n-revisions) (as (sbcl_release_for_version ver.version) release))
-                                                               (having
-                                                                (group-by (where (as version ver)
-                                                                                 (in (sbcl_release_for_version ver.version)
-                                                                                     (distinct
-                                                                                      (select (version)
-                                                                                              (where (join version result
-                                                                                                           :on (and (= v-version version)
-                                                                                                                    (= v-name i-name)))
-                                                                                                     is-release)))))
-                                                                          ((sbcl_release_for_version ver.version)))
-                                                                (> (count *) 1)))
-                                                       releasecount)
-                                                      (alias
-                                                       (select (version release-date)
-                                                               version)
-                                                       version-date)
-                                                      :on (= version release))))
+                                                     (order-by
+                                                      (join
+                                                       ;; find out number of sub-revisions for every release;
+                                                       ;; be careful, sbcl-release-for-version isn't very robust.
+                                                       (alias
+                                                        (select ((as (count *) n-revisions) (as (sbcl_release_for_version ver.version) release))
+                                                                (having
+                                                                 (group-by (where (as version ver)
+                                                                                  (in (sbcl_release_for_version ver.version)
+                                                                                      (distinct
+                                                                                       (select (version)
+                                                                                               (where (join version result
+                                                                                                            :on (and (= v-version version)
+                                                                                                                     (= v-name i-name)))
+                                                                                                      is-release)))))
+                                                                           ((sbcl_release_for_version ver.version)))
+                                                                 (> (count *) 1)))
+                                                        releasecount)
+                                                       (alias
+                                                        (select (version release-date)
+                                                                version)
+                                                        version-date)
+                                                       :on (= version release))
+                                                      (release-date))))
                                            on-connection *dbconn*)
                                       (collect `(,version ,(format nil "~A (~A)" version steps))))))
            (p

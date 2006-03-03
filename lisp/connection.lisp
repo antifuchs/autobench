@@ -28,9 +28,9 @@ the DB maintainer, installed the public key in the right place, and have customi
                                         "-l" ,remote-username ,*ssh-tunnel-host* "cat")
                                  :output :stream :input :stream :error *debug-io*
                                  :wait nil))
-       (format (process-input *ssh-tunnel*) "hello world~%")
-       (finish-output (process-input *ssh-tunnel*))
-       (read-line (process-output *ssh-tunnel*))
+       (format (sb-ext:process-input *ssh-tunnel*) "hello world~%")
+       (finish-output (sb-ext:process-input *ssh-tunnel*))
+       (read-line (sb-ext:process-output *ssh-tunnel*))
        *ssh-tunnel*)))
 
 (defun teardown-ssh-tunnel ()
