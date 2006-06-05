@@ -259,7 +259,7 @@
                             :content-type "text/xml; charset=utf-8"))
     (let ((s (request-stream request)))
       (format s "<?xml version=\"1.0\" encoding=\"utf-8\"?>")
-      (param-bind ((implementation "SBCL,(:ARCH :EMULATED-X86 :FEATURES NIL)")
+      (param-bind ((implementation "SBCL,(:ARCH :X86_64 :FEATURES NIL)")
                    (host "baker")) request
         (html-stream s
                      (emit-significant-changes :implementation implementation
