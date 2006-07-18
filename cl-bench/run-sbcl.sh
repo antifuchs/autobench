@@ -2,6 +2,8 @@
 
 SBCL="$1"; shift
 
+export LC_CTYPE=C
+
 make clean optimize-files
 "$SBCL" "$@" <<EOF
  (progn 

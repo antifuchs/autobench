@@ -44,6 +44,10 @@ and customize the variables documented in e-s-t-c's docstring.")
 (defparameter *tla-binary* (machine-case
                             ("walrus.boinkor.net" "/usr/local/bin/tla")
                             (otherwise #p"/usr/bin/baz")))
+(defparameter *git-binary* (machine-case
+                            (otherwise #p"/usr/bin/git")))
+(defparameter *cogito-binary* (machine-case
+                            (otherwise #p"/usr/bin/cg")))
 
 (defparameter *tar-binary* #p"/usr/bin/tar")
 

@@ -80,9 +80,11 @@
     implementation))
 
 (defun prepare-sbcl-environment ()
-  (remove "SBCL_HOME" (sb-ext:posix-environ)
-          :test #'string-equal
-          :key (lambda (envl) (subseq envl 0 (position #\= envl)))))
+  (remove-if (lambda (elt)
+               (member elt '("SBCL_HOME" "LC_CTYPE")
+                       :test #'string-equal))
+             (sb-ext:posix-environ)
+             :key (lambda (envl) (subseq envl 0 (position #\= envl)))))
 
 (defun shellquote (arg quote-p)
   (if quote-p
@@ -127,33 +129,33 @@
 	  :test 'equal)))
 
 (defmethod next-directory ((impl sbcl) directory)
-  (with-input-from-program (missing *tla-binary* "missing" "-f" "--dir" (namestring directory))
-    (let* ((next-rev (read-line missing nil nil)))
-      (when next-rev
-        (handler-case
-            (invoke-logged-program "baz-sbcl-update" *tla-binary*
-                                `("update" "--dir" ,(namestring directory) ,next-rev))
-          (program-exited-abnormally ()
-            ;; baz generated a conflict, maybe.
-            (invoke-logged-program "rm-sbcl-build-dir" "/bin/rm"
-                                   `("-rf" ,(namestring directory)))
-            (invoke-logged-program "baz-sbcl-get" *tla-binary*
-                                `("get" ,next-rev ,(namestring directory)))))
-        directory))))
+  (with-current-directory directory
+    (invoke-logged-program "git-fetch-sbcl" *git-binary* `("fetch"))
+    (with-input-from-program (missing *git-binary* "rev-list" "origin" "^HEAD")
+      (let* ((next-rev (iterate (for line in-stream missing using #'read-line)
+                                (for last-line previous line)
+                                (finally (return last-line)))))
+        (when next-rev
+          (invoke-logged-program "git-update-sbcl" *git-binary*
+                                 `("reset" "--hard" ,next-rev))
+          directory)))))
 
 (defmethod implementation-release-date ((impl sbcl) directory)
-  (with-input-from-program (last-revision *tla-binary* "logs" "-r" "-d" (namestring directory))
-    (with-input-from-program (log *tla-binary* "cat-log" "-d" (namestring directory) (read-line last-revision))
+  (with-current-directory directory
+    (with-input-from-program (log *git-binary* "log" "--max-count=1")
       (let ((date-line (iterate (for line in-stream log using #'read-line)
-                                (finding line such-that (and (= (mismatch line "Date: ") 6)
-                                                             (not (null (find #\/ line))))))))
-        (net.telent.date:parse-time date-line :start 6)))))
+                                (finding line such-that (and (= (mismatch line "Date:") 5))))))
+        (net.telent.date:parse-time date-line
+                                    :start 6
+                                    :end (position #\+ date-line :from-end t))))))
 
 ;;; stuff for autobuilding on walrus. not for everybody, I think...
 
 (defun last-version-p (directory)
-  (with-input-from-program (missing *tla-binary* "missing" "--dir" (namestring directory))
-    (null (read-line missing nil nil))))
+  (with-current-directory directory
+    (invoke-logged-program "git-fetch-sbcl" *git-binary* `("fetch"))
+    (with-input-from-program (missing *git-binary* "rev-list" "origin" "^HEAD")
+      (null (read-line missing nil nil)))))
 
 (defun send-mail-to (address subject)
   ;; TODO: send mail. No idea how to do that, yet

@@ -7,4 +7,4 @@ for arg in "$@" ; do
     all_args="$all_args $arg"
 done
 
-/usr/bin/linux32 --3gb /usr/bin/dchroot -d "$all_args" 2>&1
+/usr/bin/dchroot -d "$all_args" 2>&1
