@@ -88,7 +88,8 @@
                                                   (= ,(implementation-spec-mode implementation) mode)))
                                       (day))
                             :start 0 :end ,days-back))))
-                on-connection *dbconn*)
+                on-connection *dbconn*
+                cursor-name syndication-revision-days-cursor)
            (collect day-nr)))
 
 (defun make-1-entry (day p-day pp-day &key implementation host &allow-other-keys)
@@ -108,7 +109,8 @@
                                             (- (to_universal_time "today") (* 86400 ,p-day))
                                             (- (to_universal_time "today") (* 86400 ,pp-day)))))
                            (release-date))))
-                on-connection *dbconn*)
+                on-connection *dbconn*
+                cursor-name syndication-1-entry-l1-cursor)
            (finding version maximizing release-date into last-version)
            (finding version minimizing release-date into first-version)
            (for p-version previous version
@@ -183,7 +185,8 @@
                                                               (/ (stddev t.seconds) (sqrt (count t.seconds))))
                                                            (* (/ (stddev y.seconds) (sqrt (count y.seconds)))
                                                               (/ (stddev y.seconds) (sqrt (count y.seconds))))))))))))
-                              on-connection *dbconn*)
+                              on-connection *dbconn*
+                              cursor-name syndication-1-entry-l2-cursor)
                          (collect (summarize-day/benchmark release-p pp-day b-name unit implementation host y-avg t-avg y-err t-err))))
            (when impl-entry
              (collect `(|li| "from " ,(pprint-impl-and-mode implementation) " revision " ,p-version " to " ,version ":"

@@ -110,7 +110,8 @@
                                       (order-by
                                        ,(apply #'emit-where-clause conditions)
                                        ((++ b.v-name "," b.mode)) :desc))))
-                  on-connection *dbconn*)
+                  on-connection *dbconn*
+                  cursor-name offset-cursor)
              (for offset from 0)
              (maximizing offset)
              (setf (gethash (list impl host) table) offset)))))
@@ -138,7 +139,8 @@
                                             (group-by ,(apply #'emit-where-clause conditions)
                                                       (v.release-date r.m-name (++ b.v-name "," b.mode) v.version))
                                             (v.release-date))))
-                      on-connection *dbconn*)
+                      on-connection *dbconn*
+                      cursor-name timing-values-cursor)
                  (for offset = (gethash (list name host) offset-table))
                  (format f "~A~A~f~A~f~A~%"
                          version
@@ -252,7 +254,8 @@
                                 (iterate (for (machine arch) in-relation
                                               (translate* `(distinct (select (m-name type) (join result machine
                                                                                                  :on (= result.m-name machine.name)))))
-                                              on-connection *dbconn*)
+                                              on-connection *dbconn*
+                                              cursor-name machine-cursor)
                                          (collect `(,machine ,(format nil "~A | ~A" machine arch))))))
            (h2 "Implementation")
            ,(make-multi-select :implementations implementations
@@ -287,7 +290,8 @@
                                                         version-date)
                                                        :on (= version release))
                                                       (release-date))))
-                                           on-connection *dbconn*)
+                                           on-connection *dbconn*
+                                           cursor-name release-cursor)
                                       (collect `(,version ,(format nil "~A (~A)" version steps))))))
            (p
             ((input :type :submit :value "Graph")))
@@ -310,7 +314,8 @@
                                                                (= machine-support.m-name result.m-name) (= build.mode result.mode))))
                                            :end 1)))
                                         (m-name v-name mode)))))
-                            on-connection *dbconn*)
+                            on-connection *dbconn*
+                            cursor-name syndication-cursor)
                        (collect `(li
                                   ((a :href ,(format nil "~A?HOST=~A&IMPLEMENTATION=~A,~A" (urlstring *atom-url*) machine impl mode))
                                    ,(format nil "~A/~A" machine (pprint-impl-and-mode (format nil "~A,~A" impl mode))))))))))
@@ -367,7 +372,8 @@
                                                   ,@(if preferred-only
                                                         '(preferred)
                                                         nil))))))
-                on-connection *dbconn*)
+                on-connection *dbconn*
+                cursor-name all-host-implementations-cursor)
            (collect impl)))
 
 (defmacro with-db-connection (connection &body body)
