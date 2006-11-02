@@ -7,7 +7,11 @@
   (declare (ignore impl))
   (let ((*read-eval* nil))
     (with-open-file (f #p"version.lisp-expr" :direction :input)
-      (read f))))
+      ;; some revisions had a stray ' in version.lisp-expr.  ugh!
+      (let ((version (read f)))
+        (cond ((and (listp version) (eql 'quote (first version)))
+               (second version))
+              (t version))))))
 
 (defun invoke-with-customize-target-features (features function)
   (unwind-protect
