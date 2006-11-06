@@ -13,6 +13,7 @@
                  (:file "util" :depends-on ("package" "variables"))
                  (:file "txt-sql" :depends-on ("variables"))
 		 (:file "implementation" :depends-on ("variables"))
+                 (:file "vc" :depends-on ("implementation"))
 		 (:file "sbcl" :depends-on ("variables" "implementation"))
                  (:file "cmucl" :depends-on ("variables" "implementation"))
 		 (:file "autobuilder" :depends-on ("implementation" "util"))))

@@ -1,6 +1,6 @@
 (in-package :autobench)
 
-(defclass sbcl (implementation architecture-mixin)
+(defclass sbcl (implementation git-vc-mixin architecture-mixin)
      ((name :allocation :class :initform "SBCL")))
 
 (defmethod version-from-directory ((impl sbcl) directory)
@@ -127,27 +127,6 @@
 	  `((#p"sbcl" . #p"src/runtime/sbcl")
 	    (#p"sbcl.core" . #p"output/sbcl.core"))
 	  :test 'equal)))
-
-(defmethod next-directory ((impl sbcl) directory)
-  (with-current-directory directory
-    (invoke-logged-program "git-fetch-sbcl" *git-binary* `("fetch"))
-    (with-input-from-program (missing *git-binary* "rev-list" "origin" "^HEAD")
-      (let* ((next-rev (iterate (for line in-stream missing using #'read-line)
-                                (for last-line previous line)
-                                (finally (return last-line)))))
-        (when next-rev
-          (invoke-logged-program "git-update-sbcl" *git-binary*
-                                 `("reset" "--hard" ,next-rev))
-          directory)))))
-
-(defmethod implementation-release-date ((impl sbcl) directory)
-  (with-current-directory directory
-    (with-input-from-program (log *git-binary* "log" "--max-count=1")
-      (let ((date-line (iterate (for line in-stream log using #'read-line)
-                                (finding line such-that (and (= (mismatch line "Date:") 5))))))
-        (net.telent.date:parse-time date-line
-                                    :start 6
-                                    :end (position #\+ date-line :from-end t))))))
 
 ;;; stuff for autobuilding on walrus. not for everybody, I think...
 
