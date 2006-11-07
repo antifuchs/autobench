@@ -1,7 +1,7 @@
 (in-package :autobench)
 
 (defclass clisp (implementation git-vc-mixin architecture-mixin)
-     ((:name :allocation :class :initform "CLISP")))
+     ((name :allocation :class :initform "CLISP")))
 
 (defmethod implementation-required-files ((impl clisp))
   (declare (ignore impl))
