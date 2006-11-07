@@ -50,7 +50,7 @@
                                      shell-quote-p)
      "--boink-core-file" ,(shellquote
                            (namestring
-                            (implementation-cached-file-name impl "lisp.run"))
+                            (implementation-cached-file-name impl #p"base/lisp.run"))
                            shell-quote-p)
      "--boink-machine-instance" ,(shellquote (machine-instance) shell-quote-p)
      "--boink-implementation-version" ,(shellquote (impl-version impl)
