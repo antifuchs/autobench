@@ -5,7 +5,7 @@
 
 (defmethod version-from-directory :around ((impl clisp) dir)
   (let ((version (call-next-method)))
-    (subseq version (mismatch version "clisp."))r))
+    (subseq version (mismatch version "clisp."))))
 
 (defmethod implementation-required-files ((impl clisp))
   (declare (ignore impl))
