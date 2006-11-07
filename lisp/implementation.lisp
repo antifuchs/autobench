@@ -99,7 +99,8 @@ IMPL."
   (make-pathname :directory (append (pathname-directory *version-cache-dir*)
 				    (list (impl-name impl) (md5-pathname-component (implementation-translated-mode impl))
                                           (impl-version impl))
-                                    (pathname-directory file-name))
+                                    (when (eql :relative (first (pathname-directory file-name)))
+                                      (rest (pathname-directory file-name))))
 		 :name (pathname-name file-name)
 		 :type (pathname-type file-name)))
 
