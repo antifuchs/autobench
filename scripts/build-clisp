@@ -4,6 +4,9 @@
 
 CONFFLAGS=--without-readline
 
+cd src
+[ -f Makefile ] && make distclean
+cd ..
 ./configure $CONFFLAGS
 cd src
 ./makemake $CONFFLAGS > Makefile
