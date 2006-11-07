@@ -28,7 +28,7 @@ If they can not be retrieved, return NIL."
   #+sbcl sb-ext:*posix-argv*
   #+cmu ext:*command-line-strings*
   #+clisp ext:*args*
-  #-(or sbcl cmu) nil)
+  #-(or clisp sbcl cmu) nil)
 
 (defun find-program-argument-value (posix-args core-arg)
   (loop for args on posix-args
