@@ -134,7 +134,7 @@
   ;; TODO: send mail. No idea how to do that, yet
   (format t "Would have sent mail to ~s with subject ~S~%" address subject))
 
-(defun build-manual (impl dir)
+(defun build-sbcl-manual (impl dir)
   (with-unzipped-implementation-files impl
     (invoke-logged-program "sbcl-build-manual" (namestring (merge-pathnames #p"scripts/sbcl-build-manual" *base-dir*))
                            `(,(namestring dir) "antifuchs"
@@ -148,7 +148,7 @@ possible build failure to *SBCL-DEVELOPERS*."
   (if (and (not (has-next-directory-p impl dir))
            (equalp "baker" (machine-instance))) ;; only makes sense on one autobuild host
       (handler-case (progn (call-next-method impl dir)
-                           (build-manual impl dir))
+                           (build-sbcl-manual impl dir))
         (implementation-unbuildable (e)
           (send-mail-to *sbcl-developers* (format nil "Can't build ~A" (unbuildable-implementation e))))
         (program-exited-abnormally (e)
