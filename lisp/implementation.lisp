@@ -96,11 +96,12 @@ that can be READ back."
   "Returns the pathname of FILE-NAME as cached for versioned implementation
 IMPL."
   ;; XXX: use probe-file??
-  (make-pathname :directory (append (pathname-directory *version-cache-dir*)
-				    (list (impl-name impl) (md5-pathname-component (implementation-translated-mode impl))
-                                          (impl-version impl))
-                                    (when (eql :relative (first (pathname-directory file-name)))
-                                      (rest (pathname-directory file-name))))
+  (make-pathname :directory `(,@(pathname-directory *version-cache-dir*)
+                                ,(impl-name impl)
+                                ,(md5-pathname-component (implementation-translated-mode impl))
+                                ,(impl-version impl)
+                                ,@(when (eql :relative (first (pathname-directory file-name)))
+                                    (rest (pathname-directory file-name))))
 		 :name (pathname-name file-name)
 		 :type (pathname-type file-name)))
 
