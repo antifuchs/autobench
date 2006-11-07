@@ -13,9 +13,9 @@
   (declare (ignore impl))
   (cdr
    (assoc pathname
-          ((#p"clisp" . #p"src/clisp")
-           (#p"base/lisp.run" . #p"src/base/lisp.run")
-           (#p"base/lispmem.init" . #p"src/base/lispmem.init")))))
+          '((#p"clisp" . #p"src/clisp")
+            (#p"base/lisp.run" . #p"src/base/lisp.run")
+            (#p"base/lispmem.init" . #p"src/base/lispmem.init")))))
 
 (defmethod build-in-directory/arch ((impl clisp) dir (arch (eql :emulated-x86)))
   (with-current-directory dir
