@@ -33,7 +33,7 @@
                     (for s-impl = (apply 'make-instance (impl-name strategy)
                                          :version (version-from-directory implementation dir)
                                          (initargs strategy)))
-                    (when (and (funcall additional-predicate (impl-version s-impl)) (funcall (build-p strategy) impl)) 
+                    (when (and (funcall additional-predicate (impl-version s-impl)) (funcall (build-p strategy) s-impl)) 
                       (funcall function s-impl dir)))))
 
 (defun build-and-benchmark-1 (base-implementation &key directory strategies (additional-predicate (constantly t)))
