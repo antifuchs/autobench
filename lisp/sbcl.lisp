@@ -1,8 +1,9 @@
 (in-package :autobench)
 
-(defclass sbcl (implementation architecture-mixin)
+(defclass sbcl (implementation git-vc-mixin architecture-mixin)
      ((name :allocation :class :initform "SBCL")))
 
+;; overrides the git-vc-mixin version with something more sensible
 (defmethod version-from-directory ((impl sbcl) directory)
   (declare (ignore impl))
   (let ((*read-eval* nil))
@@ -90,11 +91,6 @@
              (sb-ext:posix-environ)
              :key (lambda (envl) (subseq envl 0 (position #\= envl)))))
 
-(defun shellquote (arg quote-p)
-  (if quote-p
-      (format nil "'~A'" arg)
-      arg))
-
 (defun prepare-bench-sbcl-cmdline (impl shell-quote-p)
   (list (format nil "~A" (shellquote (namestring (implementation-cached-file-name impl "sbcl")) shell-quote-p))
         "--core" (shellquote (namestring (implementation-cached-file-name impl "sbcl.core")) shell-quote-p)
@@ -132,40 +128,13 @@
 	    (#p"sbcl.core" . #p"output/sbcl.core"))
 	  :test 'equal)))
 
-(defmethod next-directory ((impl sbcl) directory)
-  (with-current-directory directory
-    (invoke-logged-program "git-fetch-sbcl" *git-binary* `("fetch"))
-    (with-input-from-program (missing *git-binary* "rev-list" "origin" "^HEAD")
-      (let* ((next-rev (iterate (for line in-stream missing using #'read-line)
-                                (for last-line previous line)
-                                (finally (return last-line)))))
-        (when next-rev
-          (invoke-logged-program "git-update-sbcl" *git-binary*
-                                 `("reset" "--hard" ,next-rev))
-          directory)))))
-
-(defmethod implementation-release-date ((impl sbcl) directory)
-  (with-current-directory directory
-    (with-input-from-program (log *git-binary* "log" "--max-count=1")
-      (let ((date-line (iterate (for line in-stream log using #'read-line)
-                                (finding line such-that (and (= (mismatch line "Date:") 5))))))
-        (net.telent.date:parse-time date-line
-                                    :start 6
-                                    :end (position #\+ date-line :from-end t))))))
-
 ;;; stuff for autobuilding on walrus. not for everybody, I think...
-
-(defun last-version-p (directory)
-  (with-current-directory directory
-    (invoke-logged-program "git-fetch-sbcl" *git-binary* `("fetch"))
-    (with-input-from-program (missing *git-binary* "rev-list" "origin" "^HEAD")
-      (null (read-line missing nil nil)))))
 
 (defun send-mail-to (address subject)
   ;; TODO: send mail. No idea how to do that, yet
   (format t "Would have sent mail to ~s with subject ~S~%" address subject))
 
-(defun build-manual (impl dir)
+(defun build-sbcl-manual (impl dir)
   (with-unzipped-implementation-files impl
     (invoke-logged-program "sbcl-build-manual" (namestring (merge-pathnames #p"scripts/sbcl-build-manual" *base-dir*))
                            `(,(namestring dir) "antifuchs"
@@ -176,10 +145,10 @@
 (defmethod build-in-directory :around ((impl sbcl) dir)
   "If this is the last revision, build the manual and report a
 possible build failure to *SBCL-DEVELOPERS*."
-  (if (and (last-version-p dir)
+  (if (and (not (has-next-directory-p impl dir))
            (equalp "baker" (machine-instance))) ;; only makes sense on one autobuild host
       (handler-case (progn (call-next-method impl dir)
-                           (build-manual impl dir))
+                           (build-sbcl-manual impl dir))
         (implementation-unbuildable (e)
           (send-mail-to *sbcl-developers* (format nil "Can't build ~A" (unbuildable-implementation e))))
         (program-exited-abnormally (e)
