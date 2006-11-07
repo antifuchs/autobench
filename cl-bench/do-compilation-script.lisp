@@ -1,4 +1,4 @@
-;;; auto-generated from file #P"generate.lisp"
+;;; auto-generated from file NIL
 (IN-PACKAGE :CL-USER)
 (LOAD #P"defpackage.lisp")
 (COMPILE-FILE #P"files/arrays.olisp")

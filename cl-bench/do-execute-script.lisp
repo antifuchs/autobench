@@ -1,4 +1,4 @@
-;;; auto-generated from file #P"generate.lisp"
+;;; auto-generated from file NIL
 (IN-PACKAGE :CL-USER)
 (LOAD #P"defpackage.lisp")
 (LOAD (COMPILE-FILE-PATHNAME #P"files/arrays.olisp"))
@@ -333,7 +333,7 @@
   (bench-gc)
   (BENCH-REPORT 'CL-BENCH.ARRAYS:BENCH-STRINGS/ADJUSTABLE "fill-strings/adjustable" 1))
 
-#-(OR ALLEGRO LISPWORKS-PERSONAL-EDITION POPLOG)
+#-(OR CLISP ALLEGRO LISPWORKS-PERSONAL-EDITION POPLOG)
 (when (run-benchmark-p 'STRING-CONCAT benchmarks-to-run)
   (format t "=== running #<benchmark STRING-CONCAT for 1 runs>~%")
   (force-output)
