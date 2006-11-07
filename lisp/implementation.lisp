@@ -196,7 +196,7 @@ After control leaves BODY, chdirs back to the old value of *d-p-d*."
 
 (defun ensure-implementation-file-unpacked (impl file-name)
   (when (probe-file (implementation-cached-zip-file-name impl file-name))
-    (unpack-file impl file-name))
+    (unpack-file impl (implementation-cached-zip-file-name impl file-name)))
   file-name)
 
 (defmethod version-from-directory :around (impl dir)
@@ -240,11 +240,11 @@ After control leaves BODY, chdirs back to the old value of *d-p-d*."
 
 (defun unpack-file (impl file-name)
   (invoke-logged-program (format nil "unpack-~A" (impl-name impl))
-                         *unpack-binary* `(,(namestring (implementation-cached-zip-file-name impl file-name)))))
+                         *unpack-binary* `(,(namestring file-name))))
 
 (defun pack-file (impl file-name)
    (invoke-logged-program (format nil "pack-~A" (impl-name impl))
-                          *pack-binary* `(,(namestring (implementation-cached-file-name impl file-name)))))
+                          *pack-binary* `(,(namestring file-name))))
 
 (defmethod print-object ((o implementation) stream)
   (print-unreadable-object (o stream :type t)
