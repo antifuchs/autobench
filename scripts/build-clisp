@@ -1,0 +1,12 @@
+#!/bin/sh -e
+
+## scaffolding for building clisp. Assumes PWD is the clisp base dir.
+
+CONFFLAGS=--without-readline
+
+./configure $CONFFLAGS
+cd src
+./makemake $CONFFLAGS > Makefile
+make clean
+make config.lisp
+make all
