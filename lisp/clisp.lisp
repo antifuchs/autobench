@@ -3,6 +3,10 @@
 (defclass clisp (implementation git-vc-mixin architecture-mixin)
      ((name :allocation :class :initform "CLISP")))
 
+(defmethod version-from-directory :around ((impl clisp) dir)
+  (let ((version (call-next-method)))
+    (subseq version (mismatch version "clisp."))r))
+
 (defmethod implementation-required-files ((impl clisp))
   (declare (ignore impl))
   (list #p"clisp"
