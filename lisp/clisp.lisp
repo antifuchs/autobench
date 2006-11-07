@@ -21,11 +21,10 @@
   (with-current-directory dir
     (invoke-logged-program
      "build-clisp"
-     (merge-pathnames (merge-pathnames #p"scripts/run-in-32bit" *base-dir*)
-                      `(,(namestring
-                          (merge-pathnames #p"scripts/build-clisp"
-                                           *base-dir*)))
-                      *base-dir*)))
+     (merge-pathnames (merge-pathnames #p"scripts/run-in-32bit" *base-dir*)   
+                      *base-dir*)
+     `(,(namestring (merge-pathnames #p"scripts/build-clisp"
+                                     *base-dir*)))))
   impl)
 
 (defmethod build-in-directory/arch ((impl clisp) dir arch)
