@@ -1,6 +1,6 @@
 ;;; all the performance benchmarks
 ;;;
-;;; Time-stamp: <2004-03-14 14:46:59 asf>
+;;; Time-stamp: <2006-11-07 17:51:50 asf>
 
 
 (in-package :cl-bench)
@@ -321,7 +321,7 @@
     :long "WITH-OUTPUT-TO-STRING and much output"
     :function 'cl-bench.arrays:bench-string-concat
     :runs 1
-    :disabled-for '(allegro lispworks-personal-edition poplog))
+    :disabled-for '(clisp allegro lispworks-personal-edition poplog))
 
 (defbench search-sequence
     :long "FIND, FIND-IF, POSITION on a simple-vector"
