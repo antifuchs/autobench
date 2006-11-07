@@ -48,14 +48,14 @@
                            (implementation-cached-file-name impl "lisp.run"))
                           shell-quote-p)))
 
-(defmethod run-benchmark/arch ((impl sbcl) (arch (eql :emulated-x86)))
+(defmethod run-benchmark/arch ((impl clisp) (arch (eql :emulated-x86)))
   (with-unzipped-implementation-files impl
     (invoke-logged-program "bench-clisp"
                            (merge-pathnames #p"scripts/run-in-32bit" *base-dir*)
                            `("./run-clisp.sh"
                              ,@(prepare-bench-clisp-cmdline impl t)))))
 
-(defmethod run-benchmark/arch ((impl sbcl) arch)
+(defmethod run-benchmark/arch ((impl clisp) arch)
   (with-unzipped-implementation-files impl
     (invoke-logged-program "bench-clisp"
                            "/usr/bin/env"
