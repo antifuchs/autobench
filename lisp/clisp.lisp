@@ -43,7 +43,7 @@
 (defun prepare-bench-clisp-cmdline (impl shell-quote-p)
   `(,(format nil "~A" (shellquote (implementation-cached-file-name impl "clisp")
                                   shell-quote-p))
-     "-q" "-norc" "-ansi" "-m" "200MB" "-E" "latin1"
+     "-q" "-norc" "-ansi" "-m" "200MB" "-E" "iso-8859-1"
      "--"
      "--boink-implementation-type" ,(shellquote
                                      (implementation-translated-mode impl)
