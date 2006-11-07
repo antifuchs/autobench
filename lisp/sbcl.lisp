@@ -3,6 +3,7 @@
 (defclass sbcl (implementation git-vc-mixin architecture-mixin)
      ((name :allocation :class :initform "SBCL")))
 
+;; overrides the git-vc-mixin version with something more sensible
 (defmethod version-from-directory ((impl sbcl) directory)
   (declare (ignore impl))
   (let ((*read-eval* nil))
@@ -85,11 +86,6 @@
                        :test #'string-equal))
              (sb-ext:posix-environ)
              :key (lambda (envl) (subseq envl 0 (position #\= envl)))))
-
-(defun shellquote (arg quote-p)
-  (if quote-p
-      (format nil "'~A'" arg)
-      arg))
 
 (defun prepare-bench-sbcl-cmdline (impl shell-quote-p)
   (list (format nil "~A" (shellquote (namestring (implementation-cached-file-name impl "sbcl")) shell-quote-p))

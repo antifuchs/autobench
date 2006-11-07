@@ -219,6 +219,11 @@ After control leaves BODY, chdirs back to the old value of *d-p-d*."
   (format nil "~(~{~2,'0X~}~)"
           (map 'list #'identity (sb-md5:md5sum-string string :external-format external-format))))
 
+(defun shellquote (arg quote-p)
+  (if quote-p
+      (format nil "'~A'" arg)
+      arg))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; our own helper functions. Not really for public use.
 
