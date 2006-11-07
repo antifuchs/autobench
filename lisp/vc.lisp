@@ -32,7 +32,7 @@
                              *git-binary* `("fetch"))
       (with-input-from-program (missing *git-binary*
                                         "rev-list" "origin" "^HEAD")
-        (null (read-line missing nil nil))))))
+        (not (null (read-line missing nil nil)))))))
 
 (defmethod implementation-release-date ((impl git-vc-mixin) directory)
   (with-current-directory directory

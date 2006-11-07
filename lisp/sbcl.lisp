@@ -130,12 +130,6 @@
 
 ;;; stuff for autobuilding on walrus. not for everybody, I think...
 
-(defun last-version-p (directory)
-  (with-current-directory directory
-    (invoke-logged-program "git-fetch-sbcl" *git-binary* `("fetch"))
-    (with-input-from-program (missing *git-binary* "rev-list" "origin" "^HEAD")
-      (null (read-line missing nil nil)))))
-
 (defun send-mail-to (address subject)
   ;; TODO: send mail. No idea how to do that, yet
   (format t "Would have sent mail to ~s with subject ~S~%" address subject))
@@ -151,7 +145,7 @@
 (defmethod build-in-directory :around ((impl sbcl) dir)
   "If this is the last revision, build the manual and report a
 possible build failure to *SBCL-DEVELOPERS*."
-  (if (and (last-version-p dir)
+  (if (and (not (has-next-directory-p impl dir))
            (equalp "baker" (machine-instance))) ;; only makes sense on one autobuild host
       (handler-case (progn (call-next-method impl dir)
                            (build-manual impl dir))
