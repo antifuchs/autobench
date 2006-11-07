@@ -1,7 +1,7 @@
 ;;; support.lisp --- performance benchmarks for Common Lisp implementations
 ;;
 ;; Author: Eric Marsden  <emarsden@laas.fr>
-;; Time-stamp: <2006-11-07 12:12:39 asf>
+;; Time-stamp: <2006-11-07 17:04:55 asf>
 ;;
 ;;
 ;; The benchmarks consist of
@@ -40,6 +40,9 @@ If they can not be retrieved, return NIL."
                                                                 "--boink-implementation-type")
         (lisp-implementation-version)))
 
+(defvar +machine-instance+ (or (find-program-argument-value (program-invocation-arguments)
+                                                            "--boink-machine-instance")
+                               (machine-instance)))
 
 (defclass benchmark ()
     ((name   :accessor benchmark-name
@@ -147,7 +150,7 @@ If they can not be retrieved, return NIL."
     (ensure-directories-exist
      (merge-pathnames (make-pathname :name (format nil "CL-benchmark-~a-~ah~am~as" (cl:lisp-implementation-version) hour minute second))
                       ; (make-pathname :directory `(:relative :up "to-import" ,(machine-instance))))
-                      (make-pathname :directory `(:relative "+to-import" ,(machine-instance))))
+                      (make-pathname :directory `(:relative "+to-import" ,+machine-instance+)))
      )))
 
 ;; grr, CLISP doesn't implement ~<..~:>
