@@ -15,10 +15,11 @@
                     :build-p ,build-p)))
 
 (defun every-nth-revision (n)
-  (lambda (revision)
+  (lambda (impl)
    (cond
-     ((release-p revision) t)
-     (t (let* ((version-split (split-sequence:split-sequence #\. revision))
+     ((release-p impl) t)
+     (t (let* ((revision (impl-version impl))
+               (version-split (split-sequence:split-sequence #\. revision))
                (minor-number (if (> (length version-split) 3)
                                  (parse-integer (elt version-split 3))
                                  nil)))
@@ -32,7 +33,7 @@
                     (for s-impl = (apply 'make-instance (impl-name strategy)
                                          :version (version-from-directory implementation dir)
                                          (initargs strategy)))
-                    (when (and (funcall additional-predicate (impl-version s-impl)) (funcall (build-p strategy) (impl-version s-impl))) 
+                    (when (and (funcall additional-predicate (impl-version s-impl)) (funcall (build-p strategy) impl)) 
                       (funcall function s-impl dir)))))
 
 (defun build-and-benchmark-1 (base-implementation &key directory strategies (additional-predicate (constantly t)))
