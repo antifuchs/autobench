@@ -2,15 +2,24 @@
 
 (defvar *version-translations*)
 
-(defun release-p (vnum)          
-  (if (search "pre" vnum)
-      (<= (count #\. vnum) 1)
-      (<= (count #\. vnum) 2)))
+(defmethod release-p ((impl sbcl))
+  (let ((vnum (impl-version impl)))
+    (if (search "pre" vnum)
+        (<= (count #\. vnum) 1)
+        (<= (count #\. vnum) 2))))
+
+(defmethod release-p ((impl clisp))
+  (let ((vnum (impl-version impl)))
+    ;; release versions look like clisp.2.25-2001-03-15
+    (= (count #\- vnum) 3)))
 
 (defun translate-version (version)
   (let ((version (copy-list version)))
     (when (string= "CMU Common Lisp" (first version))
       (setf (first version) "CMUCL"))
+    (when (string= "CLISP" (first version))
+      (setf (second version) (subseq (second version)
+                                     (mismatch (second version) "clisp."))))
     (let ((v (assoc version *version-translations* :test #'equal)))
       (if v
           (cdr v)
@@ -27,7 +36,7 @@
   (ignore-pg-errors
    (pg-exec (db-connection) (format nil "insert into version (i_name, version, release_date, is_release) values ('~A', '~A', ~A, ~A)"
                              (impl-name impl) (impl-version impl) date
-                             (if (release-p (impl-version impl)) "TRUE" "FALSE"))))
+                             (if (release-p impl) "TRUE" "FALSE"))))
   (ignore-pg-errors
    (pg-exec (db-connection) (format nil "insert into build (v_name, v_version, mode) values ('~A', '~A', '~A')"
                              (impl-name impl) (impl-version impl) mode))))
