@@ -15,7 +15,8 @@
    (assoc pathname
           '((#p"clisp" . #p"src/clisp")
             (#p"base/lisp.run" . #p"src/base/lisp.run")
-            (#p"base/lispmem.init" . #p"src/base/lispmem.init")))))
+            (#p"base/lispmem.init" . #p"src/base/lispmem.init"))
+          :test #'equal)))
 
 (defmethod build-in-directory/arch ((impl clisp) dir (arch (eql :emulated-x86)))
   (with-current-directory dir
