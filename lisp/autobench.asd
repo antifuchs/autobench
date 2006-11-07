@@ -14,9 +14,9 @@
                (:file "txt-sql" :depends-on ("variables"))
                (:file "implementation" :depends-on ("variables"))
                (:file "vc" :depends-on ("implementation"))
-               (:file "sbcl" :depends-on ("variables" "implementation"))
+               (:file "sbcl" :depends-on ("variables" "implementation" "vc"))
                (:file "cmucl" :depends-on ("variables" "implementation"))
-               (:file "clisp" :depends-on ("variables" "implementation"))
+               (:file "clisp" :depends-on ("variables" "implementation" "vc"))
                (:file "autobuilder" :depends-on ("implementation" "util"))))
 
 (defmethod perform :after ((op load-op) (c (eql (find-system :autobench))))

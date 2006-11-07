@@ -45,7 +45,7 @@
          :start 6
          :end (position #\+ date-line :from-end t))))))
 
-(defmethod version-from-directory ((impl sbcl) directory)
+(defmethod version-from-directory ((impl git-vc-mixin) directory)
   (declare (ignore impl))
   (with-current-directory directory
     (with-input-from-program (description *git-binary* "describe")
