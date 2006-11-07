@@ -1,7 +1,7 @@
 ;;; support.lisp --- performance benchmarks for Common Lisp implementations
 ;;
 ;; Author: Eric Marsden  <emarsden@laas.fr>
-;; Time-stamp: <2006-11-07 17:21:37 asf>
+;; Time-stamp: <2006-11-07 17:24:21 asf>
 ;;
 ;;
 ;; The benchmarks consist of
@@ -169,9 +169,9 @@ If they can not be retrieved, return NIL."
 (defun bench-report-header ()
   (format *benchmark-output*
           ;; This will work only as long as I test clisp versions that have ~<...~:>
-          #-(or ecl gcl cormanlisp) ";; -*- lisp -*- ~%~%~<;; ~@;~a~:>~%;;~%;; Implementation *features*:~%~@<;; ~@;~s~:>~%;;~%"
-          #+(or ecl gcl cormanlisp) ";; -*- lisp -*- ~a~%;; Implementation *features*: ~s~%;;~%"
-          (list +implementation+) *features*)
+          #-(or ecl gcl cormanlisp) ";; -*- lisp -*- ~%~%~<;; ~@;~a~:>~%;;~%;;~%"
+          #+(or ecl gcl cormanlisp) ";; -*- lisp -*- ~a"
+          (list +implementation+))
   (format *benchmark-output*
           ";; Function                      real     user     sys       consed~%")
   (format *benchmark-output*
