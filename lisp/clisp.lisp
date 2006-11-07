@@ -36,7 +36,8 @@
   (with-current-directory dir
     (invoke-logged-program "build-clisp"
                            (merge-pathnames #p"scripts/build-clisp"
-                                            *base-dir*)))
+                                            *base-dir*)
+                           '()))
   impl)
 
 (defun prepare-bench-clisp-cmdline (impl shell-quote-p)
