@@ -1,7 +1,7 @@
 ;;; support.lisp --- performance benchmarks for Common Lisp implementations
 ;;
 ;; Author: Eric Marsden  <emarsden@laas.fr>
-;; Time-stamp: <2006-03-03 23:45:00 asf>
+;; Time-stamp: <2006-11-07 12:12:39 asf>
 ;;
 ;;
 ;; The benchmarks consist of
@@ -27,6 +27,7 @@
 If they can not be retrieved, return NIL."
   #+sbcl sb-ext:*posix-argv*
   #+cmu ext:*command-line-strings*
+  #+clisp ext:*args*
   #-(or sbcl cmu) nil)
 
 (defun find-program-argument-value (posix-args core-arg)
