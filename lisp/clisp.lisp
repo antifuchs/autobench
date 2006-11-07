@@ -52,7 +52,9 @@
                            (namestring
                             (implementation-cached-file-name impl "lisp.run"))
                            shell-quote-p)
-     "--boink-machine-instance" ,(shellquote (machine-instance) shell-quote-p)))
+     "--boink-machine-instance" ,(shellquote (machine-instance) shell-quote-p)
+     "--boink-implementation-version" ,(shellquote (impl-version impl)
+                                                   shell-quote-p)))
 
 (defmethod run-benchmark/arch ((impl clisp) (arch (eql :emulated-x86)))
   (with-unzipped-implementation-files impl
