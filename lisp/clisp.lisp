@@ -7,7 +7,7 @@
   (declare (ignore impl))
   (list #p"clisp"
         #p"base/lisp.run"
-        #p"base/lispmem.init"))
+        #p"base/lispinit.mem"))
 
 (defmethod implementation-file-in-builddir ((impl clisp) pathname)
   (declare (ignore impl))
@@ -15,7 +15,7 @@
    (assoc pathname
           '((#p"clisp" . #p"src/clisp")
             (#p"base/lisp.run" . #p"src/base/lisp.run")
-            (#p"base/lispmem.init" . #p"src/base/lispmem.init"))
+            (#p"base/lispinit.mem" . #p"src/base/lispinit.mem"))
           :test #'equal)))
 
 (defmethod build-in-directory/arch ((impl clisp) dir (arch (eql :emulated-x86)))
