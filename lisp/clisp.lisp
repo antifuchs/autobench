@@ -44,13 +44,13 @@
                                   shell-quote-p))
      "-q" "-norc" "-ansi" "-m" "200MB" "-E" "latin1"
      "--"
-     "--boink-implementation-type" (shellquote
-                                    (implementation-translated-mode impl)
-                                    shell-quote-p)
-     "--boink-core-file" (shellquote
-                          (namestring
-                           (implementation-cached-file-name impl "lisp.run"))
-                          shell-quote-p)))
+     "--boink-implementation-type" ,(shellquote
+                                     (implementation-translated-mode impl)
+                                     shell-quote-p)
+     "--boink-core-file" ,(shellquote
+                           (namestring
+                            (implementation-cached-file-name impl "lisp.run"))
+                           shell-quote-p)))
 
 (defmethod run-benchmark/arch ((impl clisp) (arch (eql :emulated-x86)))
   (with-unzipped-implementation-files impl
