@@ -24,8 +24,7 @@
   (declare (ignore impl))
   (cdr
    (assoc pathname
-          '((#p"clisp" . #p"src/clisp")
-            (#p"base/lisp.run" . #p"src/base/lisp.run")
+          '((#p"base/lisp.run" . #p"src/base/lisp.run")
             (#p"base/lispinit.mem" . #p"src/base/lispinit.mem"))
           :test #'equal)))
 
@@ -55,8 +54,12 @@
   impl)
 
 (defun prepare-bench-clisp-cmdline (impl shell-quote-p)
-  `(,(format nil "~A" (shellquote (implementation-cached-file-name impl "clisp")
-                                  shell-quote-p))
+  `(,(shellquote
+      (implementation-cached-file-name impl #p"base/lisp.run")
+      shell-quote-p)
+     "-M" (shellquote
+           (implementation-cached-file-name impl #p"base/lispinit.mem")
+           shell-quote-p)
      "-q" "-norc" "-ansi" "-m" "200MB" "-E" "iso-8859-1"
      "--"
      "--boink-implementation-type" ,(shellquote
