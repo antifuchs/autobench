@@ -24,9 +24,9 @@
              (swap-endianness height))))
       (file-position stream old-position))))
 
-(defun decode-width-and-height-of-png-file (pathname)
-  (with-open-file (s pathname
-                     :element-type '(unsigned-byte 32))
-    (decode-width-and-height-of-png-stream s)))
+(defun decode-width-and-height-of-png-file (pathname)  
+  (when (probe-file filename)
+    (with-open-file (s pathname :element-type '(unsigned-byte 32))
+      (decode-width-and-height-of-png-stream s))))
 
 ;;; arch-tag: "e6f076cb-91b2-4c41-a0c0-a7ecd67c55d4"
