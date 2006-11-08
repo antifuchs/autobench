@@ -148,7 +148,7 @@
                          mean
                          #\tab
                          stderr
-                         (make-string (- max-offset offset) :initial-element #\Tab))))
+                         (make-string (* 2 (- max-offset offset)) :initial-element #\Tab))))
       (autobench::invoke-logged-program "gen-image" *ploticus-binary*
                                         `("-png" "-o" ,(namestring (make-pathname :type "png" :defaults filename)) "-prefab" "lines"
                                                  ,(format nil "data=~A" (namestring filename)) "delim=tab" "x=1"
