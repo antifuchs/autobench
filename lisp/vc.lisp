@@ -8,7 +8,7 @@
 (defclass git-vc-mixin () ())
 
 (defmethod next-directory ((impl git-vc-mixin) directory)
-  (let ((impl-name (class-name (class-of impl))))
+  (let ((impl-name (impl-name impl)))
     (with-current-directory directory
       (invoke-logged-program (format nil "git-fetch-~A"
                                      impl-name)
@@ -19,10 +19,16 @@
                                   (for last-line previous line)
                                   (finally (return last-line)))))
           (when next-rev
-            (invoke-logged-program (format nil "git-update-~A"
-                                           impl-name)
-                                   *git-binary* `("reset" "--hard" ,next-rev))
-            directory))))))
+            (directory-for-version impl directory next-rev)))))))
+
+(defmethod directory-for-version ((impl git-vc-mixin) directory version-spec)
+  "Return the source directory of IMPL from DIRECTORY for the
+  version in VERSION-SPEC.
+
+VERSION-SPEC must contain a git tag or commit id."
+  (invoke-logged-program (format nil "git-update-~A" (impl-name impl))
+                         *git-binary* `("reset" "--hard" ,version-spec))
+  directory)
 
 (defmethod has-next-directory-p ((impl git-vc-mixin) directory)
   

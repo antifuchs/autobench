@@ -25,7 +25,7 @@
                                  nil)))
           (and minor-number (zerop (mod minor-number n))))))))
 
-(defun map-over-versions-in-dir (function base-implementation strategies additional-predicate directory)
+(defun map-over-all-versions-in-dir (function base-implementation strategies additional-predicate directory)
   (iterate (with implementation = (funcall #'make-instance base-implementation))
            (for dir initially (next-directory implementation directory) then (next-directory implementation dir))
            (while dir)
@@ -36,8 +36,24 @@
                     (when (and (funcall additional-predicate (impl-version s-impl)) (funcall (build-p strategy) s-impl)) 
                       (funcall function s-impl dir)))))
 
-(defun build-and-benchmark-1 (base-implementation &key directory strategies (additional-predicate (constantly t)))
-  (map-over-versions-in-dir
+(defun map-over-given-versions-in-dir (function base-implementation strategies additional-predicate directory &rest version-specs)
+  (iterate (with implementation = (funcall #'make-instance base-implementation))
+           (for version-spec in version-specs)
+           (for dir initially
+                (directory-for-version implementation directory version-spec) then
+                (directory-for-version implementation dir version-spec))
+           (iterate (for strategy in strategies)
+                    (for s-impl = (apply 'make-instance (impl-name strategy)
+                                         :version (version-from-directory implementation dir)
+                                         (initargs strategy)))
+                    (when (and (funcall additional-predicate (impl-version s-impl)) (funcall (build-p strategy) s-impl)) 
+                      (funcall function s-impl dir)))))
+
+(defun build-and-benchmark-1 (base-implementation &key directory strategies (additional-predicate (constantly t)) version-specs)
+  (apply
+   (if version-specs
+       #'map-over-given-versions-in-dir
+       #'map-over-all-versions-in-dir)
    (lambda (impl dir)
      (handler-case (progn
                      (debug* "~&~A/~S: " impl (impl-mode impl))
@@ -55,7 +71,8 @@
 	 (format *debug-io* "can't build ~A~%" impl))
        (program-exited-abnormally (c)
          (format *debug-io* "Something else went wrong when autobuilding/benchmarking ~A: ~A~%" impl c))))
-   base-implementation strategies additional-predicate directory))
+   base-implementation strategies additional-predicate directory
+   version-specs))
 
 (defun benchmark-versions (type versions &rest initargs)
   (iterate (for version in versions)
