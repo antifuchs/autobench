@@ -12,7 +12,7 @@
     (call-next-method)
     (with-current-directory directory
       (invoke-logged-program (format nil "git-clean-~A" (impl-name impl))
-                             *git-binary* `("clean" "-dx")))))
+                             *git-binary* `("clean" "-d" "-x" ".")))))
 
 (defmethod implementation-required-files ((impl clisp))
   (declare (ignore impl))
