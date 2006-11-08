@@ -39,7 +39,8 @@
          `(,(namestring (merge-pathnames #p"scripts/build-clisp"
                                          *base-dir*))
             "gcc-2.95"))
-      (error () (error 'implementation-unbuildable :implementation impl))))
+      (program-exited-abnormally ()
+        (error 'implementation-unbuildable :implementation impl))))
   impl)
 
 (defmethod build-in-directory/arch ((impl clisp) dir arch)
@@ -49,7 +50,8 @@
                                (merge-pathnames #p"scripts/build-clisp"
                                                 *base-dir*)
                                '("gcc-3.3"))
-      (error () (error 'implementation-unbuildable :implementation impl))))
+      (program-exited-abnormally ()
+        (error 'implementation-unbuildable :implementation impl))))
   impl)
 
 (defun prepare-bench-clisp-cmdline (impl shell-quote-p)
