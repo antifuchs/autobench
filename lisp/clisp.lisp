@@ -55,10 +55,12 @@
 
 (defun prepare-bench-clisp-cmdline (impl shell-quote-p)
   `(,(shellquote
-      (implementation-cached-file-name impl #p"base/lisp.run")
+      (namestring
+       (implementation-cached-file-name impl #p"base/lisp.run"))
       shell-quote-p)
      "-M" (shellquote
-           (implementation-cached-file-name impl #p"base/lispinit.mem")
+           (namestring
+            (implementation-cached-file-name impl #p"base/lispinit.mem"))
            shell-quote-p)
      "-q" "-norc" "-ansi" "-m" "200MB" "-E" "iso-8859-1"
      "--"
