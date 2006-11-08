@@ -24,20 +24,24 @@
 
 (defmethod build-in-directory/arch ((impl clisp) dir (arch (eql :emulated-x86)))
   (with-current-directory dir
-    (invoke-logged-program
-     "build-clisp"
-     (merge-pathnames (merge-pathnames #p"scripts/run-in-32bit" *base-dir*)   
-                      *base-dir*)
-     `(,(namestring (merge-pathnames #p"scripts/build-clisp"
-                                     *base-dir*)))))
+    (handler-case
+        (invoke-logged-program
+         "build-clisp"
+         (merge-pathnames (merge-pathnames #p"scripts/run-in-32bit" *base-dir*)
+                          *base-dir*)
+         `(,(namestring (merge-pathnames #p"scripts/build-clisp"
+                                         *base-dir*))))
+      (error 'implementation-unbuildable :implementation impl)))
   impl)
 
 (defmethod build-in-directory/arch ((impl clisp) dir arch)
   (with-current-directory dir
-    (invoke-logged-program "build-clisp"
-                           (merge-pathnames #p"scripts/build-clisp"
-                                            *base-dir*)
-                           '()))
+    (handler-case
+        (invoke-logged-program "build-clisp"
+                               (merge-pathnames #p"scripts/build-clisp"
+                                                *base-dir*)
+                               '())
+      (error 'implementation-unbuildable :implementation impl)))
   impl)
 
 (defun prepare-bench-clisp-cmdline (impl shell-quote-p)
