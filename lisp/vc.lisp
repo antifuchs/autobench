@@ -26,8 +26,9 @@
   version in VERSION-SPEC.
 
 VERSION-SPEC must contain a git tag or commit id."
-  (invoke-logged-program (format nil "git-update-~A" (impl-name impl))
-                         *git-binary* `("reset" "--hard" ,version-spec))
+  (with-current-directory directory
+    (invoke-logged-program (format nil "git-update-~A" (impl-name impl))
+                           *git-binary* `("reset" "--hard" ,version-spec)))
   directory)
 
 (defmethod has-next-directory-p ((impl git-vc-mixin) directory)
