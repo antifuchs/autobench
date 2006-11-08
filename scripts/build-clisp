@@ -1,15 +1,12 @@
-#!/bin/sh -e
+#!/bin/sh -xe
 
 ## scaffolding for building clisp. Assumes PWD is the clisp base dir.
 
 CONFFLAGS=--without-readline
 
-cd src
-[ -f Makefile ] && make distclean
 cd ..
-./configure $CONFFLAGS
+CC=gcc-3.3 ./configure $CONFFLAGS
 cd src
-./makemake $CONFFLAGS > Makefile
-make clean
+sh ./makemake $CONFFLAGS > Makefile
 make config.lisp
 make all
