@@ -70,7 +70,7 @@
        (implementation-unbuildable ()
 	 (format *debug-io* "can't build ~A~%" impl))
        (program-exited-abnormally (c)
-         (format *debug-io* "Something else went wrong when autobuilding/benchmarking ~A: ~A~%" impl c))))
+         (format *debug-io* "Something else went wrong when autobuilding/benchmarking ~A:~% ~A~%" impl c))))
    base-implementation strategies additional-predicate directory
    version-specs))
 
