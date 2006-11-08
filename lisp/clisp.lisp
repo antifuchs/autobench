@@ -57,10 +57,10 @@
       (namestring
        (implementation-cached-file-name impl #p"base/lisp.run"))
       shell-quote-p)
-     "-M" (shellquote
-           (namestring
-            (implementation-cached-file-name impl #p"base/lispinit.mem"))
-           shell-quote-p)
+     "-M" ,(shellquote
+            (namestring
+             (implementation-cached-file-name impl #p"base/lispinit.mem"))
+            shell-quote-p)
      "-q" "-norc" "-ansi" "-m" "200MB" "-E" "iso-8859-1"
      "--"
      "--boink-implementation-type" ,(shellquote
