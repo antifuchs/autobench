@@ -40,7 +40,7 @@
   (iterate (with implementation = (funcall #'make-instance base-implementation))
            (for version-spec in version-specs)
            (for dir initially
-                (directory-for-version implementation directory version-spec) then
+                (directory-for-version implementation directory (first version-specs)) then
                 (directory-for-version implementation dir version-spec))
            (iterate (for strategy in strategies)
                     (for s-impl = (apply 'make-instance (impl-name strategy)
