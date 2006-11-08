@@ -38,7 +38,7 @@
                           *base-dir*)
          `(,(namestring (merge-pathnames #p"scripts/build-clisp"
                                          *base-dir*))))
-      (error 'implementation-unbuildable :implementation impl)))
+      (error () (error 'implementation-unbuildable :implementation impl))))
   impl)
 
 (defmethod build-in-directory/arch ((impl clisp) dir arch)
@@ -48,7 +48,7 @@
                                (merge-pathnames #p"scripts/build-clisp"
                                                 *base-dir*)
                                '())
-      (error 'implementation-unbuildable :implementation impl)))
+      (error () (error 'implementation-unbuildable :implementation impl))))
   impl)
 
 (defun prepare-bench-clisp-cmdline (impl shell-quote-p)
