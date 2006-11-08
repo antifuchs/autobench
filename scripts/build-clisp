@@ -4,7 +4,6 @@
 
 CONFFLAGS=--without-readline
 
-cd ..
 CC=gcc-3.3 ./configure $CONFFLAGS
 cd src
 sh ./makemake $CONFFLAGS > Makefile
