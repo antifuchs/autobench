@@ -7,7 +7,7 @@
   (let ((version (call-next-method)))
     (subseq version (mismatch version "clisp."))))
 
-(defmethod directory-for-version :around ((impl clisp) directory version-spec)
+(defmethod clean-directory :around ((impl clisp) directory version-spec)
   (multiple-value-prog1
     (call-next-method)
     (with-current-directory directory

@@ -30,6 +30,11 @@
 (defgeneric version-from-directory (implementation directory)
   (:documentation "Returns the version of the implementation in DIRECTORY."))
 
+(defgeneric clean-directory (implementation directory)
+  (:documentation "Prepares DIRECTORY for a \"clean\" build.")
+  (:method (impl directory)
+    (declare (ignore impl directory))))
+
 (defgeneric build-in-directory (implementation directory)
   (:documentation "Run the build for implementation
 IMPLEMENTATION in DIRECTORY.
@@ -211,7 +216,8 @@ After control leaves BODY, chdirs back to the old value of *d-p-d*."
   "After a finished build, move the required files for the
   version into the appropriate place in the build cache."
   (with-current-directory dir
-    (let ((impl (call-next-method impl dir)))
+    (clean-directory impl dir)
+    (let ((impl (call-next-method)))
       (loop for file in (implementation-required-files impl)
 	    do (rename-file (merge-pathnames (implementation-file-in-builddir impl file) dir)
 			    (ensure-directories-exist

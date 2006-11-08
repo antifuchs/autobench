@@ -45,9 +45,11 @@
                                           (lambda ()
                                             ,@body)))
 
-(defun cleanup-build-dir ()
-  (when (probe-file #p"tools-for-build/grovel-headers")
-    (delete-file #p"tools-for-build/grovel-headers")))
+(defmethod clean-directory :around ((impl sbcl) dir)
+  (declare (ignore impl))
+  (with-current-directory dir
+    (when (probe-file #p"tools-for-build/grovel-headers")
+      (delete-file #p"tools-for-build/grovel-headers"))))
 
 (defmacro with-sbcl-build-setup ((implementation directory) &body body)
   (let ((arch (gensym))
@@ -55,7 +57,7 @@
    `(with-current-directory ,directory
       (destructuring-bind (&key ((:arch ,arch)) ((:features ,features))) (impl-mode ,implementation)
         (declare (ignorable ,arch))
-        (cleanup-build-dir)
+        (clean-directory ,directory)
         (with-customize-target-features ,features
           (handler-case (progn ,@body)
             (program-exited-abnormally ()
