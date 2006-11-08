@@ -4,7 +4,9 @@
 
 CONFFLAGS=--without-readline
 
-CC=gcc-3.3 ./configure $CONFFLAGS
+export CC=${1:-gcc}
+
+./configure $CONFFLAGS
 cd src
 sh ./makemake $CONFFLAGS > Makefile
 make config.lisp

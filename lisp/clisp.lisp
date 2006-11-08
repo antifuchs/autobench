@@ -37,7 +37,8 @@
          (merge-pathnames (merge-pathnames #p"scripts/run-in-32bit" *base-dir*)
                           *base-dir*)
          `(,(namestring (merge-pathnames #p"scripts/build-clisp"
-                                         *base-dir*))))
+                                         *base-dir*))
+            "gcc-2.95"))
       (error () (error 'implementation-unbuildable :implementation impl))))
   impl)
 
@@ -47,7 +48,7 @@
         (invoke-logged-program "build-clisp"
                                (merge-pathnames #p"scripts/build-clisp"
                                                 *base-dir*)
-                               '())
+                               '("gcc-3.3"))
       (error () (error 'implementation-unbuildable :implementation impl))))
   impl)
 
