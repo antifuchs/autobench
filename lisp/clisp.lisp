@@ -16,8 +16,7 @@
 
 (defmethod implementation-required-files ((impl clisp))
   (declare (ignore impl))
-  (list #p"clisp"
-        #p"base/lisp.run"
+  (list #p"base/lisp.run"
         #p"base/lispinit.mem"))
 
 (defmethod implementation-file-in-builddir ((impl clisp) pathname)
