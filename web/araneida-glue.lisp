@@ -330,8 +330,8 @@
                      (collect `(h1 ,benchmark))
                      (collect `((a :name ,benchmark)))
                      (collect `((img :src ,image-url
-                                     :width ,width
-                                     :height ,height
+                                     ,@(if width `(:width ,width))
+                                     ,@(if height `(:height ,height))
                                      :alt ,benchmark))))))))))
 
 (defun enteredp (param)
