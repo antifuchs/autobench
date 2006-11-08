@@ -7,9 +7,9 @@
   (let ((version (call-next-method)))
     (subseq version (mismatch version "clisp."))))
 
-(defmethod clean-directory :around ((impl clisp) directory version-spec)
-  (multiple-value-prog1
-    (call-next-method)
+(defmethod clean-directory :around ((impl clisp) directory)
+  (multiple-value-prog1 
+   (call-next-method)
     (with-current-directory directory
       (invoke-logged-program (format nil "git-clean-~A" (impl-name impl))
                              *git-binary* `("clean" "-d" "-x" ".")))))
