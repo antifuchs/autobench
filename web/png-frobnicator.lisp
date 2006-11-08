@@ -25,7 +25,7 @@
       (file-position stream old-position))))
 
 (defun decode-width-and-height-of-png-file (pathname)  
-  (when (probe-file filename)
+  (when (probe-file pathname)
     (with-open-file (s pathname :element-type '(unsigned-byte 32))
       (decode-width-and-height-of-png-stream s))))
 
