@@ -7,6 +7,13 @@
   (let ((version (call-next-method)))
     (subseq version (mismatch version "clisp."))))
 
+(defmethod directory-for-version :around ((impl clisp) directory version-spec)
+  (multiple-value-prog1
+    (call-next-method)
+    (with-current-directory directory
+      (invoke-logged-program (format nil "git-clean-~A" (impl-name impl))
+                             *git-binary* `("clean" "-dx")))))
+
 (defmethod implementation-required-files ((impl clisp))
   (declare (ignore impl))
   (list #p"clisp"
