@@ -56,7 +56,7 @@
        #'map-over-all-versions-in-dir)
    (lambda (impl dir)
      (handler-case (progn
-                     (debug* "~&~A/~S: " impl (impl-mode impl))
+                     (debug* "~&~A ~A/~S: " (get-universal-time) impl (impl-mode impl))
                      (unless (implementation-already-built-p impl)
                        (debug* "Build:")
                        (build-in-directory impl dir)
