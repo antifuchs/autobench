@@ -36,7 +36,7 @@
                           *base-dir*)
          `(,(namestring (merge-pathnames #p"scripts/build-clisp"
                                          *base-dir*))
-            "gcc-2.95"))
+            "gcc-3.3"))
       (program-exited-abnormally ()
         (error 'implementation-unbuildable :implementation impl))))
   impl)
