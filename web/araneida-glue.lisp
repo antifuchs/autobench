@@ -239,12 +239,12 @@
                   args))
     (html-stream s
       `(html
-	(head (title "SBCL Benchmarks")
+	(head (title "Automated common lisp implementation benchmarks")
               ((link :rel "stylesheet" :title "Style Sheet" :type "text/css" :href "/bench.css")))
 	(body
          ((div :id "banner")
           (h1 ((a :href ,(urlstring *index-url*))
-               "SBCL benchmarks"))
+               "Automated common lisp implementation benchmarks"))
           (h2 "Displaying " ,(if only-release (format nil "release ~A" only-release) "all releases")))
          ((div :id "sidebar")
           ((form :method :get :action ,(urlstring *index-url*))
@@ -409,8 +409,8 @@
 	    else
 	      collect `((option :value ,op) ,text))))
 
-(defun make-multi-select (name selected options)
-  `((select :name ,name :multiple "multiple" :size 5m)
+(defun make-multi-select (name selected options &key (size (length options)))
+  `((select :name ,name :multiple "multiple" :size ,size)
     ,@(loop for (op text) in options
 	    if (member op selected :test #'string=)
 	      collect `((option :value ,op :selected "selected") ,text)

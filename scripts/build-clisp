@@ -4,7 +4,8 @@
 
 CONFFLAGS=--without-readline
 
-export CC=${1:-gcc}
+CC=${1:-gcc}
+export CC
 
 ./configure $CONFFLAGS
 cd src
