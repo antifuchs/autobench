@@ -53,10 +53,13 @@
   impl)
 
 (defun clisp-major-version (version)
-    (subseq version 0 (position #\. version)))
+    (parse-integer version
+                   :end (position #\. version)))
 
 (defun clisp-minor-version (version)
-    (subseq version (1+ (position #\. version)) (position #\- version)))
+    (parse-integer version
+                   :start (1+ (position #\. version))
+                   :end (position #\- version)))
 
 (defun prepare-bench-clisp-cmdline (impl shell-quote-p)
   `(,(shellquote
