@@ -52,6 +52,12 @@
         (error 'implementation-unbuildable :implementation impl))))
   impl)
 
+(defun clisp-major-version (version)
+    (subseq version 0 (position #\. version)))
+
+(defun clisp-minor-version (version)
+    (subseq version (1+ (position #\. version)) (position #\- version)))
+
 (defun prepare-bench-clisp-cmdline (impl shell-quote-p)
   `(,(shellquote
       (namestring
@@ -61,7 +67,17 @@
             (namestring
              (implementation-cached-file-name impl #p"base/lispinit.mem"))
             shell-quote-p)
-     "-q" "-norc" "-ansi" "-m" "200MB" "-E" "iso-8859-1"
+     "-q" "-norc"
+     ,(if (and (<= (clisp-major-version (impl-version impl)) 2)
+               (<= (clisp-minor-version (impl-version impl)) 27))
+          "-a"
+          "-ansi")
+     "-m" "200MB"
+     ,(if (and (<= (clisp-major-version (impl-version impl)) 2)
+               (<= (clisp-minor-version (impl-version impl)) 30))
+          "-Efile"
+          "-E")
+     "iso-8859-1"
      "--"
      "--boink-implementation-type" ,(shellquote
                                      (implementation-translated-mode impl)
