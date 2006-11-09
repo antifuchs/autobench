@@ -1,6 +1,6 @@
 (in-package :autobench-web)
 
-(defparameter *site-name* "sbcl-test.boinkor.net")
+(defparameter *site-name* "sbcl.boinkor.net")
 
 (defparameter *prefab-base* #p"/home/sbcl-arch/autobench/+prefab/")
 (defparameter *ploticus-binary* "/usr/bin/ploticus")
