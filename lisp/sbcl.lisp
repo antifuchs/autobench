@@ -57,7 +57,6 @@
    `(with-current-directory ,directory
       (destructuring-bind (&key ((:arch ,arch)) ((:features ,features))) (impl-mode ,implementation)
         (declare (ignorable ,arch))
-        (clean-directory ,directory)
         (with-customize-target-features ,features
           (handler-case (progn ,@body)
             (program-exited-abnormally ()
