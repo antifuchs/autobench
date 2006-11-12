@@ -82,7 +82,7 @@
     (and (= r.b-name ,benchmark)
          ,(if only-release
               `(= ,only-release v.belongs-to-release)
-              `(or (= v.belongs-to-release ,only-release)
+              `(or (= v.release v.belongs-to-release)
                    (>= v.release-date ,latest)))
          (in m-name ',host)
          (in b.v-name ',(mapcar #'implementation-spec-impl implementations))
