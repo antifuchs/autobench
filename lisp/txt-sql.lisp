@@ -2,6 +2,8 @@
 
 (defvar *version-translations*)
 
+
+;;; the release-p methods should soon expire...
 (defmethod release-p ((impl sbcl))
   (let ((vnum (impl-version impl)))
     (if (search "pre" vnum)
@@ -12,6 +14,35 @@
   (let ((vnum (impl-version impl)))
     ;; release versions look like clisp.2.25-2001-03-15
     (= (count #\- vnum) 3)))
+
+
+;;; ...and be replaced by these:
+(defmethod release-for-version ((impl sbcl))
+  (let ((vnum (impl-version impl)))
+    (labels ((strip-last-dotnumber (vnum)
+               (subseq vnum 0 (position #\. vnum :from-end t))))
+      (cond
+        ((search "pre" vnum)
+         ;; Pre versions belong to their releases
+         (concatenate 'string
+                      (strip-last-dotnumber
+                       (substitute "" "pre" vnum))
+                      ".0"))
+        ((<= (count #\. vnum) 2)
+         ;; Releases belong to themselves
+         vnum)
+        (t
+         ;; All other candidates get their last component stripped
+         (strip-last-dotnumber vnum))))))
+
+(defmethod release-for-version ((impl clisp))
+  (let ((vnum (impl-version impl)))
+    ;; release versions look like clisp.2.25-2001-03-15
+    ;; non-release versions:      clisp.2.41-2006-10-13-g0126e2a
+    (cond
+      ((= (count #\- vnum) 3) vnum)
+      (t (subseq vnum 0 (position #\- vnum :from-end t))))))
+
 
 (defun translate-version (version)
   (let ((version (copy-list version)))
@@ -34,9 +65,10 @@
   (ignore-pg-errors
    (pg-exec (db-connection) (format nil "insert into impl values ('~A', (select max(field_offset)+2 from impl))" (impl-name impl))))
   (ignore-pg-errors
-   (pg-exec (db-connection) (format nil "insert into version (i_name, version, release_date, is_release) values ('~A', '~A', ~A, ~A)"
+   (pg-exec (db-connection) (format nil "insert into version (i_name, version, release_date, is_release, belongs_to_release) values ('~A', '~A', ~A, ~A, '~A')"
                              (impl-name impl) (impl-version impl) date
-                             (if (release-p impl) "TRUE" "FALSE"))))
+                             (if (release-p impl) "TRUE" "FALSE")
+                             (release-for-version impl))))
   (ignore-pg-errors
    (pg-exec (db-connection) (format nil "insert into build (v_name, v_version, mode) values ('~A', '~A', '~A')"
                              (impl-name impl) (impl-version impl) mode))))
