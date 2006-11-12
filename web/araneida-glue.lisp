@@ -75,19 +75,18 @@
 (defun emit-where-clause (&key benchmark implementations only-release host earliest latest &allow-other-keys)
   `(where
     (join (join (as result r)
-                      (as build b)
-                      :on (and (= r.v-name b.v-name) (= r.v-version b.v-version) (= r.mode b.mode)))
-                (as version v)
-                :on (and (= r.v-name v.i-name) (= r.v-version v.version)))
+                (as build b)
+                :on (and (= r.v-name b.v-name) (= r.v-version b.v-version) (= r.mode b.mode)))
+          (as version v)
+          :on (and (= r.v-name v.i-name) (= r.v-version v.version)))
     (and (= r.b-name ,benchmark)
-          ,(if only-release
-               `(and (>= v.release-date ,earliest)
-                     (<= v.release-date ,latest))
-               `(or is-release
-                    (>= v.release-date ,latest)))
-          (in m-name ',host)
-          (in b.v-name ',(mapcar #'implementation-spec-impl implementations))
-          (in b.mode ',(mapcar #'implementation-spec-mode implementations)))))
+         ,(if only-release
+              `(= ,only-release v.belongs-to-release)
+              `(or (= v.belongs-to-release v.version)
+                   (>= v.release-date ,latest)))
+         (in m-name ',host)
+         (in b.v-name ',(mapcar #'implementation-spec-impl implementations))
+         (in b.mode ',(mapcar #'implementation-spec-mode implementations)))))
 
 
 
@@ -189,7 +188,7 @@
                                                  :on (and (= result.v-name version.i-name) (= v-version version)))
                                            (and (in m-name ',host)
                                                 ,(if only-release
-                                                     `(= ,only-release (sbcl_release_for_version version))
+                                                     `(= ,only-release version.belongs-to-release)
                                                      t)))
                                     (version.i-name)))))
        :tuple 0)
@@ -269,19 +268,18 @@
                                                      (order-by
                                                       (join
                                                        ;; find out number of sub-revisions for every release;
-                                                       ;; be careful, sbcl-release-for-version isn't very robust.
                                                        (alias
-                                                        (select ((as (count *) n-revisions) (as (sbcl_release_for_version ver.version) release))
+                                                        (select ((as (count *) n-revisions) (as ver.belongs-to-release release))
                                                                 (having
                                                                  (group-by (where (as version ver)
-                                                                                  (in (sbcl_release_for_version ver.version)
+                                                                                  (in ver.belongs-to-release
                                                                                       (distinct
                                                                                        (select (version)
                                                                                                (where (join version result
                                                                                                             :on (and (= v-version version)
                                                                                                                      (= v-name i-name)))
                                                                                                       is-release)))))
-                                                                           ((sbcl_release_for_version ver.version)))
+                                                                           (ver.belongs-to-release))
                                                                  (> (count *) 1)))
                                                         releasecount)
                                                        (alias
