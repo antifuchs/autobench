@@ -81,8 +81,9 @@
           :on (and (= r.v-name v.i-name) (= r.v-version v.version)))
     (and (= r.b-name ,benchmark)
          ,(if only-release
-              `(= ,only-release v.belongs-to-release)
-              `(or (= v.release v.belongs-to-release)
+              `(and (>= v.release-date ,earliest)
+                    (<= v.release-date ,latest))
+              `(or (= v.belongs_to_release v.version)
                    (>= v.release-date ,latest)))
          (in m-name ',host)
          (in b.v-name ',(mapcar #'implementation-spec-impl implementations))
@@ -230,107 +231,139 @@
          (earliest (first date-boundaries))
          (latest (second date-boundaries)))
     (iterate (for (benchmark unit) in benchmarks)
-           (apply #'ensure-image-file-exists
-                  :unit unit
-                  :benchmark benchmark
-                  :earliest earliest
-                  :latest latest
-                  args))
+             (apply #'ensure-image-file-exists
+                    :unit unit
+                    :benchmark benchmark
+                    :earliest earliest
+                    :latest latest
+                    args))
     (html-stream s
-      `(html
-	(head (title "Automated common lisp implementation benchmarks")
-              ((link :rel "stylesheet" :title "Style Sheet" :type "text/css" :href "/bench.css")))
-	(body
-         ((div :id "banner")
-          (h1 ((a :href ,(urlstring *index-url*))
-               "Automated common lisp implementation benchmarks"))
-          (h2 "Displaying " ,(if only-release (format nil "release ~A" only-release) "all releases")))
-         ((div :id "sidebar")
-          ((form :method :get :action ,(urlstring *index-url*))
-           (h2 "Machine")
-           (ul
-            ,(make-multi-select :host host
-                                (iterate (for (machine arch) in-relation
-                                              (translate* `(distinct (select (m-name type) (join result machine
-                                                                                                 :on (= result.m-name machine.name)))))
-                                              on-connection *dbconn*
-                                              cursor-name machine-cursor)
-                                         (collect `(,machine ,(format nil "~A | ~A" machine arch))))))
-           (h2 "Implementation")
-           ,(make-multi-select :implementations implementations
-                               (mapcar (lambda (impl) (list impl (pprint-impl-and-mode impl))) (all-implementations-of-host host)))
-           (h2 "Release")
-           ,(make-select :only-release only-release
-                         `((nil "All releases")
-                           ,@(iterate (for (version date steps) in-relation
-                                           (translate*
-                                            `(select (version release-date n-revisions)
-                                                     (order-by
-                                                      (join
-                                                       ;; find out number of sub-revisions for every release;
-                                                       (alias
-                                                        (select ((as (count *) n-revisions) (as ver.belongs-to-release release))
-                                                                (having
-                                                                 (group-by (where (as version ver)
-                                                                                  (in ver.belongs-to-release
-                                                                                      (distinct
-                                                                                       (select (version)
-                                                                                               (where (join version result
-                                                                                                            :on (and (= v-version version)
-                                                                                                                     (= v-name i-name)))
-                                                                                                      is-release)))))
-                                                                           (ver.belongs-to-release))
-                                                                 (> (count *) 1)))
-                                                        releasecount)
-                                                       (alias
-                                                        (select (version release-date)
-                                                                version)
-                                                        version-date)
-                                                       :on (= version release))
-                                                      (release-date))))
-                                           on-connection *dbconn*
-                                           cursor-name release-cursor)
-                                      (collect `(,version ,(format nil "~A (~A)" version steps))))))
-           (p
-            ((input :type :submit :value "Graph")))
-           (h2 "Syndicate (atom 1.0)")
-           (ul
-            ,@(iterate (for (machine impl mode) in-relation
-                            (translate*
-                             `(distinct
-                               (select (machine-support.m-name build.v-name build.mode)
-                                       (order-by
-                                        (where
-                                         (join build
-                                               machine-support
-                                               :on (and (= machine-support.i-name build.v-name) (= machine-support.mode build.mode)))
-                                         (exists
-                                          (limit
-                                           (select (*)
-                                                   (where result
-                                                          (and (= machine-support.i-name result.v-name) (= build.v-version result.v-version)
-                                                               (= machine-support.m-name result.m-name) (= build.mode result.mode))))
-                                           :end 1)))
-                                        (m-name v-name mode)))))
-                            on-connection *dbconn*
-                            cursor-name syndication-cursor)
-                       (collect `(li
-                                  ((a :href ,(format nil "~A?HOST=~A&IMPLEMENTATION=~A,~A" (urlstring *atom-url*) machine impl mode))
-                                   ,(format nil "~A/~A" machine (pprint-impl-and-mode (format nil "~A,~A" impl mode))))))))))
-         ((div :id "content")
-          ,@(iterate (for (benchmark unit) in benchmarks)
-                     (for (values image-url filename) = (apply #'url-for-image
-                                                               :benchmark benchmark
-                                                               :earliest earliest
-                                                               :latest latest
-                                                               args))
-                     (for (values width height) = (decode-width-and-height-of-png-file filename))
-                     (collect `(h1 ,benchmark))
-                     (collect `((a :name ,benchmark)))
-                     (collect `((img :src ,image-url
-                                     ,@(if width `(:width ,width))
-                                     ,@(if height `(:height ,height))
-                                     :alt ,benchmark))))))))))
+                 `(html
+                   (head (title "Automated common lisp implementation benchmarks")
+                         ((link :rel "stylesheet" :title "Style Sheet" :type "text/css" :href "/bench.css"))
+                         (js-script
+                          (setf dj-config (create :is-debug nil)))
+                         ((script :type "text/javascript" :src "/js/dojo/dojo.js"))
+                         ((script :type "text/javascript" :src "/js/callbacks.js"))
+                         (js-script
+                          (dojo.require "dojo.io.*")
+                          (dojo.require "dojo.event.*")
+                          (dojo.require "dojo.widget.*")
+
+                          (defun impl-selected ()
+                            (dojo.io.bind
+                             (create :url "ajax/releases/"
+                                     :handler impl-callback
+                                     :content (create
+                                               :implementations (selected-values
+                                                                 (dojo.by-id "IMPLEMENTATIONS"))
+                                               :host (selected-values (dojo.by-id "HOST"))))))
+                          (defun host-selected ()
+                            (dojo.io.bind
+                             (create :url "ajax/implementations/"
+                                     :handler host-callback
+                                     :content (create :host (selected-values (dojo.by-id "HOST"))))))
+                          (defun init-boinkmarks ()
+                            (setf (slot-value (dojo.by-id "IMPLEMENTATIONS") 'onchange) impl-selected)
+                            (setf (slot-value (dojo.by-id "HOST") 'onchange) host-selected))
+                          (dojo.add-on-load init-boinkmarks)))
+                   (body
+                    ((div :id "banner")
+                     (h1 ((a :href ,(urlstring *index-url*))
+                          "Automated common lisp implementation benchmarks"))
+                     (h2 "Displaying " ,(if only-release (format nil "release ~A" only-release) "all releases")))
+                    ((div :id "sidebar")
+                     ((form :method :get :action ,(urlstring *index-url*))
+                      (h2 "Machine")
+                      (ul
+                       ,(make-multi-select :host host
+                                           (iterate (for (machine arch) in-relation
+                                                         (translate* `(distinct (select (m-name type) (join result machine
+                                                                                                            :on (= result.m-name machine.name)))))
+                                                         on-connection *dbconn*
+                                                         cursor-name machine-cursor)
+                                                    (collect `(,machine ,(format nil "~A | ~A" machine arch))))))
+                      (h2 "Implementations")
+                      ,(make-multi-select :implementations implementations
+                                          (mapcar (lambda (impl) (list impl (pprint-impl-and-mode impl))) (all-implementations-of-host host)))
+                      (h2 "Release")
+                      ,(make-select :only-release only-release
+                                    (releases-for-implementations host implementations))
+                      (p
+                       ((input :type :submit :value "Graph")))
+                      (h2 "Syndicate (atom 1.0)")
+                      (ul
+                       ,@(iterate (for (machine impl mode) in-relation
+                                       (translate*
+                                        `(distinct
+                                          (select (machine-support.m-name build.v-name build.mode)
+                                                  (order-by
+                                                   (where
+                                                    (join build
+                                                          machine-support
+                                                          :on (and (= machine-support.i-name build.v-name) (= machine-support.mode build.mode)))
+                                                    (exists
+                                                     (limit
+                                                      (select (*)
+                                                              (where result
+                                                                     (and (= machine-support.i-name result.v-name) (= build.v-version result.v-version)
+                                                                          (= machine-support.m-name result.m-name) (= build.mode result.mode))))
+                                                      :end 1)))
+                                                   (m-name v-name mode)))))
+                                       on-connection *dbconn*
+                                       cursor-name syndication-cursor)
+                                  (collect `(li
+                                             ((a :href ,(format nil "~A?HOST=~A&IMPLEMENTATION=~A,~A" (urlstring *atom-url*) machine impl mode))
+                                              ,(format nil "~A/~A" machine (pprint-impl-and-mode (format nil "~A,~A" impl mode))))))))))
+                    ((div :id "content")
+                     ,@(iterate (for (benchmark unit) in benchmarks)
+                                (for (values image-url filename) = (apply #'url-for-image
+                                                                          :benchmark benchmark
+                                                                          :earliest earliest
+                                                                          :latest latest
+                                                                          args))
+                                (for (values width height) = (decode-width-and-height-of-png-file filename))
+                                (collect `(h1 ,benchmark))
+                                (collect `((a :name ,benchmark)))
+                                (collect `((img :src ,image-url
+                                                ,@(if width `(:width ,width))
+                                                ,@(if height `(:height ,height))
+                                                :alt ,benchmark))))))))))
+
+(defun releases-for-implementations (host implementations)
+  `((nil "All releases")
+    ,@(iterate (for (version date steps) in-relation
+                    (translate*
+                     `(select (version release-date n-revisions)
+                              (order-by
+                               (join
+                                ;; find out number of sub-revisions for every release;
+                                (alias
+                                 (select ((as (count *) n-revisions) (as ver.belongs-to-release release))
+                                         (having
+                                          (group-by (where (as version ver)
+                                                           (in ver.belongs-to-release
+                                                               (distinct
+                                                                (select (version)
+                                                                        (where (join version result
+                                                                                     :on (and (= v-version version)
+                                                                                              (= v-name i-name)))
+                                                                               (and (= version.version
+                                                                                       version.belongs-to-release)
+                                                                                    (in m-name ',host)
+                                                                                    (in (++ v-name "," mode) ',implementations)))))))
+                                                    (ver.belongs-to-release))
+                                          (> (count *) 1)))
+                                 releasecount)
+                                (alias
+                                 (select (version release-date)
+                                         version)
+                                 version-date)
+                                :on (= version release))
+                               (release-date))))
+                    on-connection *dbconn*
+                    cursor-name release-cursor)
+               (collect `(,version ,(format nil "~A (~A)" version steps))))))
 
 (defun enteredp (param)
   (and param (not (equal "" param))))
@@ -358,21 +391,25 @@
        ,@body)))
 
 (defun all-implementations-of-host (host &optional preferred-only)
-  (iterate (for (impl) in-relation
+  (iterate (for (impl mode) in-relation
                 (translate* `(distinct
-                              (select ((++ v-name "," result.mode))
-                                      (where (join result
-                                                   machine-support
-                                                   :on (and (= result.m-name machine-support.m-name)
-                                                            (= result.v-name machine-support.i-name)
-                                                            (= result.mode machine-support.mode)))
-                                             (and (in result.m-name ',host)
+                              (select (i-name mode)
+                                      (where machine-support
+                                             (and (in m-name ',host)
+                                                  (exists
+                                                   (limit
+                                                    (select (*)
+                                                            (where result
+                                                                   (and (= result.m-name machine-support.m-name)
+                                                                        (= result.v-name machine-support.i-name)
+                                                                        (= result.mode machine-support.mode))))
+                                                    :end 1))
                                                   ,@(if preferred-only
                                                         '(preferred)
                                                         nil))))))
                 on-connection *dbconn*
                 cursor-name all-host-implementations-cursor)
-           (collect impl)))
+           (collect (concatenate 'string impl "," mode))))
 
 (defmacro with-db-connection (connection &body body)
   `(let ((,connection (autobench:connect-to-database)))
@@ -400,23 +437,47 @@
                               :host host)))))))
 
 (defun make-select (name default options)
-  `((select :name ,name)
-    ,@(loop for (op text) in options
-	    if (equal default op)
-	      collect `((option :value ,op :selected "selected") ,text)
-	    else
-	      collect `((option :value ,op) ,text))))
+  `((select :name ,name :id ,name)
+    ,@(make-select-options default options)))
 
-(defun make-multi-select (name selected options &key (size (length options)))
-  `((select :name ,name :multiple "multiple" :size ,size)
-    ,@(loop for (op text) in options
-	    if (member op selected :test #'string=)
-	      collect `((option :value ,op :selected "selected") ,text)
-	    else
-	      collect `((option :value ,op) ,text))))
+(defun make-multi-select (name default options &key (size (length options)))
+  `((select :name ,name :id ,name :multiple "multiple" :size ,size)
+    ,@(make-select-options default options :multi-select-p t)))
+
+(defun make-select-options (default options &key multi-select-p)
+  (loop for (op text) in options
+        if (if multi-select-p
+               (member op default :test #'string-equal)
+               (string-equal default op))
+          collect `((option :value ,op :selected "selected") ,text)
+        else
+          collect `((option :value ,op) ,text)))
+
+(defclass release-handler (handler) ())
+
+(defclass implementation-handler (handler) ())
+
+(defmethod handle-request-response ((handler release-handler) method request)
+  (with-db-connection *dbconn*
+    (param-bind ((host (list "baker") t)
+                 (implementations nil t)) request
+      (when (and host implementations)
+        (mapcar (lambda (elt) (html-stream (request-stream request) elt))
+                (make-select-options nil
+                                     (releases-for-implementations host implementations)))))))
+
+(defmethod handle-request-response ((handler implementation-handler) method request)
+  (with-db-connection *dbconn*
+    (param-bind ((host (list "baker") t)) request
+      (when host
+        (mapcar (lambda (elt) (html-stream (request-stream request) elt))
+                (make-select-options nil
+                                     (mapcar (lambda (impl) (list impl (pprint-impl-and-mode impl))) (all-implementations-of-host host))))))))
 
 (araneida:attach-hierarchy (http-listener-handler *bench-listener*) *internal-base-url* *base-url*
   ("/" index-handler)
+  ("/ajax/releases/" release-handler)
+  ("/ajax/implementations/" implementation-handler)
   ("/atom/"  atom-handler))
 
 
