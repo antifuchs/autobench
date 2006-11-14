@@ -6,12 +6,13 @@
 (cl:in-package #:autobench-web-system)
 
 (defsystem autobench-web
-    :depends-on (autobench pg split-sequence iterate iterate-pg araneida common-idioms sexql)
-    :components ((:file "package")
-                 (:file "util" :depends-on ("package"))
-                 (:file "png-frobnicator" :depends-on ("package"))
-                 (:file "araneida-glue" :depends-on ("package" "util" "png-frobnicator"))
-                 (:file "syndication" :depends-on ("package" "araneida-glue" "util"))))
+  :depends-on (autobench pg split-sequence iterate iterate-pg :parenscript araneida common-idioms sexql)
+  :components ((:file "package")
+               (:file "util" :depends-on ("package"))
+               (:file "png-frobnicator" :depends-on ("package"))
+               (:file "incremental-html" :depends-on ("package" "util"))
+               (:file "araneida-glue" :depends-on ("package" "util" "incremental-html" "png-frobnicator"))
+               (:file "syndication" :depends-on ("package" "araneida-glue" "util"))))
 
 
 
