@@ -1,5 +1,9 @@
 (in-package :autobench-web)
 
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (set-dispatch-macro-character #\# #\h #'read-tag))
+
 (defparameter *site-name* "sbcl.boinkor.net")
 
 (defparameter *prefab-base* #p"/home/sbcl-arch/autobench/+prefab/")
@@ -220,16 +224,19 @@
       (format nil "~A:~A" impl
               (string-downcase (format nil "~A~@[/~S~]" arch features))))))
 
-(defun emit-image-index (s &rest args &key host only-release implementations &allow-other-keys)
-  (let* ((benchmarks (pg-result (pg-exec *dbconn*
-                                         (translate* `(distinct (select (b-name unit)
-                                                                        (where
-                                                                         (join result benchmark
-                                                                               :on (= result.b_name benchmark.name))
-                                                                         (in result.m-name ',host)))))) :tuples))
-         (date-boundaries (apply #'date-boundaries args))
-         (earliest (first date-boundaries))
-         (latest (second date-boundaries)))
+(defun emit-image-index (s &rest args &key earliest latest host only-release implementations &allow-other-keys)
+  (let ((benchmarks (pg-result (pg-exec *dbconn*
+                                        (translate*
+                                         `(select (name unit)
+                                                  (where benchmark
+                                                         (exists
+                                                          (limit
+                                                           (select (*)
+                                                                   (where result
+                                                                          (and (= result.b_name benchmark.name)
+                                                                               (in result.m-name ',host))))
+                                                           :end 1))))))
+                               :tuples)))
     (iterate (for (benchmark unit) in benchmarks)
              (apply #'ensure-image-file-exists
                     :unit unit
@@ -237,98 +244,108 @@
                     :earliest earliest
                     :latest latest
                     args))
-    (html-stream s
-                 `(html
-                   (head (title "Automated common lisp implementation benchmarks")
-                         ((link :rel "stylesheet" :title "Style Sheet" :type "text/css" :href "/bench.css"))
-                         (js-script
-                          (setf dj-config (create :is-debug nil)))
-                         ((script :type "text/javascript" :src "/js/dojo/dojo.js"))
-                         ((script :type "text/javascript" :src "/js/callbacks.js"))
-                         (js-script
-                          (dojo.require "dojo.io.*")
-                          (dojo.require "dojo.event.*")
-                          (dojo.require "dojo.widget.*")
+    (let  ((*default-tag-stream* s))
+      #h(html
+         (html-stream s
+                      `(head (title "Automated common lisp implementation benchmarks")
+                             ((link :rel "stylesheet" :title "Style Sheet" :type "text/css" :href "/bench.css"))
+                             (js-script
+                              (setf dj-config (create :is-debug nil)))
+                             ((script :type "text/javascript" :src "/js/dojo/dojo.js"))
+                             ((script :type "text/javascript" :src "/js/callbacks.js"))
+                             (js-script
+                              (dojo.require "dojo.io.*")
+                              (dojo.require "dojo.event.*")
+                              (dojo.require "dojo.widget.*")
 
-                          (defun impl-selected ()
-                            (dojo.io.bind
-                             (create :url "ajax/releases/"
-                                     :handler impl-callback
-                                     :content (create
-                                               :implementations (selected-values
-                                                                 (dojo.by-id "IMPLEMENTATIONS"))
-                                               :host (selected-values (dojo.by-id "HOST"))))))
-                          (defun host-selected ()
-                            (dojo.io.bind
-                             (create :url "ajax/implementations/"
-                                     :handler host-callback
-                                     :content (create :host (selected-values (dojo.by-id "HOST"))))))
-                          (defun init-boinkmarks ()
-                            (setf (slot-value (dojo.by-id "IMPLEMENTATIONS") 'onchange) impl-selected)
-                            (setf (slot-value (dojo.by-id "HOST") 'onchange) host-selected))
-                          (dojo.add-on-load init-boinkmarks)))
-                   (body
-                    ((div :id "banner")
-                     (h1 ((a :href ,(urlstring *index-url*))
-                          "Automated common lisp implementation benchmarks"))
-                     (h2 "Displaying " ,(if only-release (format nil "release ~A" only-release) "all releases")))
-                    ((div :id "sidebar")
-                     ((form :method :get :action ,(urlstring *index-url*))
-                      (h2 "Machine")
-                      (ul
-                       ,(make-multi-select :host host
-                                           (iterate (for (machine arch) in-relation
-                                                         (translate* `(distinct (select (m-name type) (join result machine
-                                                                                                            :on (= result.m-name machine.name)))))
-                                                         on-connection *dbconn*
-                                                         cursor-name machine-cursor)
-                                                    (collect `(,machine ,(format nil "~A | ~A" machine arch))))))
-                      (h2 "Implementations")
-                      ,(make-multi-select :implementations implementations
-                                          (mapcar (lambda (impl) (list impl (pprint-impl-and-mode impl))) (all-implementations-of-host host)))
-                      (h2 "Release")
-                      ,(make-select :only-release only-release
-                                    (releases-for-implementations host implementations))
-                      (p
-                       ((input :type :submit :value "Graph")))
-                      (h2 "Syndicate (atom 1.0)")
-                      (ul
-                       ,@(iterate (for (machine impl mode) in-relation
-                                       (translate*
-                                        `(distinct
-                                          (select (machine-support.m-name build.v-name build.mode)
-                                                  (order-by
-                                                   (where
-                                                    (join build
-                                                          machine-support
-                                                          :on (and (= machine-support.i-name build.v-name) (= machine-support.mode build.mode)))
-                                                    (exists
-                                                     (limit
-                                                      (select (*)
-                                                              (where result
-                                                                     (and (= machine-support.i-name result.v-name) (= build.v-version result.v-version)
-                                                                          (= machine-support.m-name result.m-name) (= build.mode result.mode))))
-                                                      :end 1)))
-                                                   (m-name v-name mode)))))
-                                       on-connection *dbconn*
-                                       cursor-name syndication-cursor)
-                                  (collect `(li
-                                             ((a :href ,(format nil "~A?HOST=~A&IMPLEMENTATION=~A,~A" (urlstring *atom-url*) machine impl mode))
-                                              ,(format nil "~A/~A" machine (pprint-impl-and-mode (format nil "~A,~A" impl mode))))))))))
-                    ((div :id "content")
-                     ,@(iterate (for (benchmark unit) in benchmarks)
-                                (for (values image-url filename) = (apply #'url-for-image
-                                                                          :benchmark benchmark
-                                                                          :earliest earliest
-                                                                          :latest latest
-                                                                          args))
-                                (for (values width height) = (decode-width-and-height-of-png-file filename))
-                                (collect `(h1 ,benchmark))
-                                (collect `((a :name ,benchmark)))
-                                (collect `((img :src ,image-url
-                                                ,@(if width `(:width ,width))
-                                                ,@(if height `(:height ,height))
-                                                :alt ,benchmark))))))))))
+                              (defun impl-selected ()
+                                (dojo.io.bind
+                                 (create :url "ajax/releases/"
+                                         :handler impl-callback
+                                         :content (create
+                                                   :implementations (selected-values
+                                                                     (dojo.by-id "IMPLEMENTATIONS"))
+                                                   :host (selected-values (dojo.by-id "HOST"))))))
+                              (defun host-selected ()
+                                (dojo.io.bind
+                                 (create :url "ajax/implementations/"
+                                         :handler host-callback
+                                         :content (create :host (selected-values (dojo.by-id "HOST"))))))
+                              (defun init-boinkmarks ()
+                                (setf (slot-value (dojo.by-id "IMPLEMENTATIONS") 'onchange) impl-selected)
+                                (setf (slot-value (dojo.by-id "HOST") 'onchange) host-selected))
+                              (dojo.add-on-load init-boinkmarks))))
+         #h(body
+            (html-stream s
+                         `((div :id "banner")
+                           ((div :class "last")
+                            "Last result: " ,(net.telent.date:universal-time-to-rfc2822-date *latest-result*))
+                           (h1 ((a :href ,(urlstring *index-url*))
+                                "Automated common lisp implementation benchmarks"))
+                           (h2 "Displaying " ,(if only-release (format nil "release ~A. " only-release) "all releases. "))))
+            (html-stream
+             s
+             `((div :id "sidebar")
+               ((form :method :get :action ,(urlstring *index-url*))
+                (h2 "Machine")
+                (ul
+                 ,(make-multi-select :host host
+                                     (iterate (for (machine arch) in-relation
+                                                   (translate* `(distinct (select (m-name type) (join result machine
+                                                                                                      :on (= result.m-name machine.name)))))
+                                                   on-connection *dbconn*
+                                                   cursor-name machine-cursor)
+                                              (collect `(,machine ,(format nil "~A | ~A" machine arch))))))
+                (h2 "Implementations")
+                ,(make-multi-select :implementations implementations
+                                    (mapcar (lambda (impl) (list impl (pprint-impl-and-mode impl))) (all-implementations-of-host host)))
+                (h2 "Release")
+                ,(make-select :only-release only-release
+                              (releases-for-implementations host implementations))
+                (p
+                 ((input :type :submit :value "Graph")))
+                (h2 "Syndicate (atom 1.0)")
+                (ul
+                 ,@(iterate (for (machine impl mode) in-relation
+                                 (translate*
+                                  `(distinct
+                                    (select (machine-support.m-name build.v-name build.mode)
+                                            (order-by
+                                             (where
+                                              (join build
+                                                    machine-support
+                                                    :on (and (= machine-support.i-name build.v-name) (= machine-support.mode build.mode)))
+                                              (exists
+                                               (limit
+                                                (select (*)
+                                                        (where result
+                                                               (and (= machine-support.i-name result.v-name) (= build.v-version result.v-version)
+                                                                    (= machine-support.m-name result.m-name) (= build.mode result.mode))))
+                                                :end 1)))
+                                             (m-name v-name mode)))))
+                                 on-connection *dbconn*
+                                 cursor-name syndication-cursor)
+                            (collect `(li
+                                       ((a :href ,(format nil "~A?HOST=~A&IMPLEMENTATION=~A,~A" (urlstring *atom-url*) machine impl mode))
+                                        ,(format nil "~A/~A" machine (pprint-impl-and-mode (format nil "~A,~A" impl mode)))))))))))
+            #h('(div :id "content")
+                (iterate (for (benchmark unit) in benchmarks)
+                         (for (values image-url filename) = (apply #'url-for-image
+                                                                   :benchmark benchmark
+                                                                   :earliest earliest
+                                                                   :latest latest
+                                                                   args))
+                         (for (values width height) = (decode-width-and-height-of-png-file filename))
+                         #h('(div :class "entry")
+                             #h(`(a :name ,benchmark))
+                             #h('(div :class "entry-head")
+                                 #h(h2 (princ benchmark s))
+                                 #h('(div :class "entry-date")
+                                     #h(`(a :href ,(format nil "#~A" benchmark)) (format s "#"))))
+                             #h(`(img :src ,image-url
+                                      ,@(if width `(:width ,width))
+                                      ,@(if height `(:height ,height))
+                                      :alt ,benchmark))))))))))
 
 (defun releases-for-implementations (host implementations)
   `((nil "All releases")
@@ -421,20 +438,38 @@
                                      (format *debug-io* "Caught timeout ~A. continuing...~%" c)
                                      (invoke-restart (find-restart 'continue c)))))
     (with-db-connection *dbconn*
-      (let ((*latest-result* (first (pg-result (pg-exec *dbconn* "select max(date) from result") :tuple 0))))
-        (request-send-headers request
-                              :expires  (+ 1200 (get-universal-time))
-                              :last-modified *latest-result*
-                              :conditional t) 
-        (let ((s (request-stream request)))
-          (format s "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\" \"http://www.w3.org/TR/html4/loose.dtd\">")
-          (param-bind ((host (list "baker") t)
-                       (only-release nil)
-                       (implementations (all-implementations-of-host host t) t)) request
+      (param-bind ((host (list "baker") t)
+                   (only-release nil)
+                   (implementations (all-implementations-of-host host t) t)) request
+            
+        (let* ((date-boundaries (date-boundaries :host host :only-release only-release))
+               (earliest (first date-boundaries))
+               (latest (second date-boundaries))
+               (*latest-result* (first (pg-result (pg-exec *dbconn*
+                                                           (translate*
+                                                            `(select ((max date))
+                                                                     (where (join result version
+                                                                                  :on (and (= version v-version) (= i-name v-name)))
+                                                                            (and (in v-name
+                                                                                     ',(mapcar
+                                                                                        (lambda (impl)
+                                                                                          (subseq impl 0 (position #\, impl)))
+                                                                                        implementations))
+                                                                                 (< release-date ,latest)
+                                                                                 (> release-date ,earliest))))))
+                                                  :tuple 0))))
+          (request-send-headers request
+                                :expires  (+ 1200 (get-universal-time))
+                                :last-modified *latest-result*
+                                :conditional t) 
+          (let ((s (request-stream request)))
+            (format s "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\" \"http://www.w3.org/TR/html4/loose.dtd\">")
             (emit-image-index s
                               :implementations implementations
                               :only-release only-release
-                              :host host)))))))
+                              :host host
+                              :earliest earliest
+                              :latest latest)))))))
 
 (defun make-select (name default options)
   `((select :name ,name :id ,name)
