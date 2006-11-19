@@ -29,7 +29,7 @@
 (define-condition already-locked ()
   ((pathname :accessor already-locked-pathname :initarg :pathname))
   (:report (lambda (c s)
-             (format s "~&Pathname ~A is already locked" (already-locked-pathname c)))))
+             (format s "~&Lock file pathname ~A already exists" (already-locked-pathname c)))))
 
 (labels ((perform-lockedness-test (pathname contents)
            (let ((read-contents (make-array (1+ (length contents))
