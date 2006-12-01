@@ -89,6 +89,7 @@
                            (namestring
                             (implementation-cached-file-name impl #p"base/lisp.run"))
                            shell-quote-p)
+     ;; the next two are specific to clisp:
      "--boink-machine-instance" ,(shellquote (machine-instance) shell-quote-p)
      "--boink-implementation-version" ,(shellquote (impl-version impl)
                                                    shell-quote-p)))
