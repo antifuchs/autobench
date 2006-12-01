@@ -18,20 +18,25 @@
              :implementation implementation))
     implementation))
 
+(defun prepare-cmucl-cmdline (impl shell-quote-p)
+  `(,(shellquote (namestring (implementation-cached-file-name impl "lisp"))
+                 shell-quote-p)
+     "-batch" "-core" ,(shellquote (namestring (implementation-cached-file-name impl "lisp.core"))
+                                   shell-quote-p)
+     "--boink-core-file" ,(shellquote (namestring (implementation-cached-file-name impl "lisp.core"))
+                                      shell-quote-p)
+     "--boink-implementation-type" ,(shellquote (implementation-translated-mode impl)
+                                                shell-quote-p)))
 
 (defmethod run-cmucl-benchmark (impl (arch (eql :x86)))
   (invoke-logged-program "bench-cmucl" "/usr/bin/env"
-                         `("bash" "run-cmucl.sh" ,(namestring (implementation-cached-file-name impl "lisp"))
-                                  "-batch" "-core" ,(namestring (implementation-cached-file-name impl "lisp.core"))
-                                  "--boink-core-file" ,(namestring (implementation-cached-file-name impl "lisp.core"))
-                                  "--boink-implementation-type" ,(implementation-translated-mode impl))))
+                         `("bash" "run-cmucl.sh"
+                                  ,@(prepare-cmucl-cmdline impl nil))))
 
 (defmethod run-cmucl-benchmark (impl (arch (eql :emulated-x86)))
   (invoke-logged-program "bench-cmucl" (merge-pathnames #p"scripts/run-in-32bit" *base-dir*)
-                         `("bash" "run-cmucl.sh" ,(namestring (implementation-cached-file-name impl "lisp"))
-                           "-batch" "-core" ,(namestring (implementation-cached-file-name impl "lisp.core"))
-                           "--boink-core-file" ,(namestring (implementation-cached-file-name impl "lisp.core"))
-                           "--boink-implementation-type" ,(shellquote (implementation-translated-mode impl) t))))
+                         `("bash" "run-cmucl.sh"
+                                  ,@(prepare-cmucl-cmdline impl t))))
 
 (defmethod run-benchmark ((impl cmucl))
   (with-unzipped-implementation-files impl
