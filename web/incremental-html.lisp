@@ -3,7 +3,6 @@
 (defvar *default-tag-stream*)
 
 (defun invoke-tag (tagoid stream continuation)
-  
   (macrolet ((continue-with-output ((format-before &rest args-before) (format-after &rest args-after))
                `(progn
                   (format stream ,format-before ,@args-before)

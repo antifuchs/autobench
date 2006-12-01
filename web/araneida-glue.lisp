@@ -245,107 +245,120 @@
                     :latest latest
                     args))
     (let  ((*default-tag-stream* s))
-      #h(html
-         (html-stream s
-                      `(head (title "Automated common lisp implementation benchmarks")
-                             ((link :rel "stylesheet" :title "Style Sheet" :type "text/css" :href "/bench.css"))
-                             (js-script
-                              (setf dj-config (create :is-debug nil)))
-                             ((script :type "text/javascript" :src "/js/dojo/dojo.js"))
-                             ((script :type "text/javascript" :src "/js/callbacks.js"))
-                             (js-script
-                              (dojo.require "dojo.io.*")
-                              (dojo.require "dojo.event.*")
-                              (dojo.require "dojo.widget.*")
-
-                              (defun impl-selected ()
-                                (dojo.io.bind
-                                 (create :url "ajax/releases/"
-                                         :handler impl-callback
-                                         :content (create
-                                                   :implementations (selected-values
-                                                                     (dojo.by-id "IMPLEMENTATIONS"))
-                                                   :host (selected-values (dojo.by-id "HOST"))))))
-                              (defun host-selected ()
-                                (dojo.io.bind
-                                 (create :url "ajax/implementations/"
-                                         :handler host-callback
-                                         :content (create :host (selected-values (dojo.by-id "HOST"))))))
-                              (defun init-boinkmarks ()
-                                (setf (slot-value (dojo.by-id "IMPLEMENTATIONS") 'onchange) impl-selected)
-                                (setf (slot-value (dojo.by-id "HOST") 'onchange) host-selected))
-                              (dojo.add-on-load init-boinkmarks))))
-         #h(body
-            (html-stream s
-                         `((div :id "banner")
-                           ((div :class "last")
-                            "Last result: " ,(net.telent.date:universal-time-to-rfc2822-date *latest-result*))
-                           (h1 ((a :href ,(urlstring *index-url*))
-                                "Automated common lisp implementation benchmarks"))
-                           (h2 "Displaying " ,(if only-release (format nil "release ~A. " only-release) "all releases. "))))
-            (html-stream
-             s
-             `((div :id "sidebar")
-               ((form :method :get :action ,(urlstring *index-url*))
-                (h2 "Machine")
-                (ul
-                 ,(make-multi-select :host host
-                                     (iterate (for (machine arch) in-relation
-                                                   (translate* `(distinct (select (m-name type) (join result machine
-                                                                                                      :on (= result.m-name machine.name)))))
-                                                   on-connection *dbconn*
-                                                   cursor-name machine-cursor)
-                                              (collect `(,machine ,(format nil "~A | ~A" machine arch))))))
-                (h2 "Implementations")
-                ,(make-multi-select :implementations implementations
-                                    (mapcar (lambda (impl) (list impl (pprint-impl-and-mode impl))) (all-implementations-of-host host)))
-                (h2 "Release")
-                ,(make-select :only-release only-release
-                              (releases-for-implementations host implementations))
-                (p
-                 ((input :type :submit :value "Graph")))
-                (h2 "Syndicate (atom 1.0)")
-                (ul
-                 ,@(iterate (for (machine impl mode) in-relation
-                                 (translate*
-                                  `(distinct
-                                    (select (machine-support.m-name build.v-name build.mode)
-                                            (order-by
-                                             (where
-                                              (join build
-                                                    machine-support
-                                                    :on (and (= machine-support.i-name build.v-name) (= machine-support.mode build.mode)))
-                                              (exists
-                                               (limit
-                                                (select (*)
-                                                        (where result
-                                                               (and (= machine-support.i-name result.v-name) (= build.v-version result.v-version)
-                                                                    (= machine-support.m-name result.m-name) (= build.mode result.mode))))
-                                                :end 1)))
-                                             (m-name v-name mode)))))
-                                 on-connection *dbconn*
-                                 cursor-name syndication-cursor)
-                            (collect `(li
-                                       ((a :href ,(format nil "~A?HOST=~A&IMPLEMENTATION=~A,~A" (urlstring *atom-url*) machine impl mode))
-                                        ,(format nil "~A/~A" machine (pprint-impl-and-mode (format nil "~A,~A" impl mode)))))))))))
-            #h('(div :id "content")
-                (iterate (for (benchmark unit) in benchmarks)
-                         (for (values image-url filename) = (apply #'url-for-image
-                                                                   :benchmark benchmark
-                                                                   :earliest earliest
-                                                                   :latest latest
-                                                                   args))
-                         (for (values width height) = (decode-width-and-height-of-png-file filename))
-                         #h('(div :class "entry")
-                             #h(`(a :name ,benchmark))
-                             #h('(div :class "entry-head")
-                                 #h(h2 (princ benchmark s))
-                                 #h('(div :class "entry-date")
-                                     #h(`(a :href ,(format nil "#~A" benchmark)) (format s "#"))))
-                             #h(`(img :src ,image-url
-                                      ,@(if width `(:width ,width))
-                                      ,@(if height `(:height ,height))
-                                      :alt ,benchmark))))))))))
+      #h('(html :xmlns "http://www.w3.org/1999/xhtml" :lang "en" :|xml:lang| "en")
+          (html-stream s
+                       `(head (title "Automated common lisp implementation benchmarks")
+                              ((|link| :rel "stylesheet" :title "Style Sheet" :type "text/css" :href "/bench.css"))
+                              (js-script
+                               (setf dj-config (create :is-debug nil)))
+                              ((script :type "text/javascript" :src "/js/dojo/dojo.js"))
+                              ((script :type "text/javascript" :src "/js/callbacks.js"))
+                              (js-script
+                               (dojo.require "dojo.io.*")
+                               (dojo.require "dojo.event.*")
+                               (dojo.require "dojo.widget.*")
+                               (defun impl-selected ()
+                                 (dojo.io.bind
+                                  (create :url "ajax/releases/"
+                                          :handler impl-callback
+                                          :content (create
+                                                    :implementations (selected-values
+                                                                      (dojo.by-id "IMPLEMENTATIONS"))
+                                                    :host (selected-values (dojo.by-id "HOST"))))))
+                               (defun host-selected ()
+                                 (dojo.io.bind
+                                  (create :url "ajax/implementations/"
+                                          :handler host-callback
+                                          :content (create :host (selected-values (dojo.by-id "HOST"))))))
+                               (defun init-boinkmarks ()
+                                 (setf (slot-value (dojo.by-id "IMPLEMENTATIONS") 'onchange) impl-selected)
+                                 (setf (slot-value (dojo.by-id "HOST") 'onchange) host-selected))
+                               (dojo.add-on-load init-boinkmarks))))
+          
+          #h(body
+             (html-stream s
+                          `((div :id "banner")
+                            ((div :class "last")
+                             "Last result: " ,(net.telent.date:universal-time-to-rfc2822-date *latest-result*))
+                            (h1 ((a :href ,(urlstring *index-url*))
+                                 "Automated common lisp implementation benchmarks"))
+                            (h2 "Displaying " ,(if only-release (format nil "release ~A. " only-release) "all releases. "))))
+             (html-stream
+              s
+              `((div :id "sidebar")
+                ((form :method "get" :action ,(urlstring *index-url*))
+                 (h2 "Machine")
+                 (p
+                  ,(make-multi-select :host host
+                                      (iterate (for (machine arch) in-relation
+                                                    (translate* `(distinct (select (m-name type) (join result machine
+                                                                                                       :on (= result.m-name machine.name)))))
+                                                    on-connection *dbconn*
+                                                    cursor-name machine-cursor)
+                                               (collect `(,machine ,(format nil "~A | ~A" machine arch))))))
+                 (h2 "Implementations")
+                 (p
+                  ,(make-multi-select :implementations implementations
+                                      (mapcar (lambda (impl) (list impl (pprint-impl-and-mode impl))) (all-implementations-of-host host))))
+                 (h2 "Release")
+                 (p
+                  ,(make-select :only-release only-release
+                                (releases-for-implementations host implementations)))
+                 (p
+                  ((|input| :type "submit" :value "Graph")))
+                 (h2 "Syndicate (atom 1.0)")
+                 (ul
+                  ,@(iterate (for (machine impl mode) in-relation
+                                  (translate*
+                                   `(distinct
+                                     (select (machine-support.m-name build.v-name build.mode)
+                                             (order-by
+                                              (where
+                                               (join build
+                                                     machine-support
+                                                     :on (and (= machine-support.i-name build.v-name) (= machine-support.mode build.mode)))
+                                               (exists
+                                                (limit
+                                                 (select (*)
+                                                         (where result
+                                                                (and (= machine-support.i-name result.v-name) (= build.v-version result.v-version)
+                                                                     (= machine-support.m-name result.m-name) (= build.mode result.mode))))
+                                                 :end 1)))
+                                              (m-name v-name mode)))))
+                                  on-connection *dbconn*
+                                  cursor-name syndication-cursor)
+                             (collect `(li
+                                        ((a :href ,(urlstring-escape
+                                                    (format nil "~A?HOST=~A&IMPLEMENTATION=~A,~A" (urlstring *atom-url*) machine impl mode)))
+                                         ,(format nil "~A/~A" machine (pprint-impl-and-mode (format nil "~A,~A" impl mode)))))))))))
+             #h('(div :id "content")
+                 (iterate (for (benchmark unit) in benchmarks)
+                          (for (values image-url filename) = (apply #'url-for-image
+                                                                    :benchmark benchmark
+                                                                    :earliest earliest
+                                                                    :latest latest
+                                                                    args))
+                          (for (values width height) = (decode-width-and-height-of-png-file filename))
+                          #h('(div :class "entry")
+                              #h(`(a :name ,(html-escape (substitute-if #\_
+                                                                        (lambda (c)
+                                                                          (member c '(#\/ #\+)))
+                                                                        benchmark))))
+                              #h('(div :class "entry-head")
+                                  #h(h2 (princ benchmark s))
+                                  #h('(div :class "entry-date")
+                                      #h(`(a :href ,(substitute-if #\_
+                                                                   (lambda (c)
+                                                                     (member c '(#\/ #\+)))
+                                                                   (format nil "#~A" benchmark)))
+                                          (format s "#"))))
+                              #h('(div :class "entry-text")
+                                  #h(`(img :src ,image-url
+                                           ,@(if width `(:width ,width))
+                                           ,@(if height `(:height ,height))
+                                           :alt ,benchmark))))
+                          (terpri s)))))))
+  t)
 
 (defun releases-for-implementations (host implementations)
   `((nil "All releases")
@@ -460,10 +473,13 @@
                                                   :tuple 0))))
           (request-send-headers request
                                 :expires  (+ 1200 (get-universal-time))
+                                :content-type "application/xhtml+xml; charset=utf-8"
                                 :last-modified *latest-result*
                                 :conditional t) 
           (let ((s (request-stream request)))
-            (format s "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\" \"http://www.w3.org/TR/html4/loose.dtd\">")
+            ;; (format s "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\" \"http://www.w3.org/TR/html4/loose.dtd\">")
+            (format s "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">~%")
+            ;; (format s "<?xml version=\"1.0\" encoding=\"UTF-8\"?>~%")
             (emit-image-index s
                               :implementations implementations
                               :only-release only-release
