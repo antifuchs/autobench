@@ -22,6 +22,10 @@
     (labels ((strip-last-dotnumber (vnum)
                (subseq vnum 0 (position #\. vnum :from-end t))))
       (cond
+        ((eql (length "1.0.0")
+              (mismatch "1.0" vnum))
+         ;; the 1.0 release really should have been 1.0.0.
+         "1.0")
         ((search "pre" vnum)
          ;; Pre versions belong to their releases
          (concatenate 'string
