@@ -1,5 +1,7 @@
 ;;; simple lockfile-based locking
 
+(in-package :autobench)
+
 (define-condition already-locked ()
   ((pathname :accessor already-locked-pathname :initarg :pathname))
   (:report (lambda (c s)

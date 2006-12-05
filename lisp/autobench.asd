@@ -16,7 +16,7 @@
                (:file "sbcl" :depends-on ("variables" "implementation" "vc"))
                (:file "cmucl" :depends-on ("variables" "implementation"))
                (:file "clisp" :depends-on ("variables" "implementation" "vc"))
-               (:file "file-locking" :depends-on "package")
+               (:file "file-locking" :depends-on ("package"))
                (:file "autobuilder"
                       :depends-on ("implementation" "util" "file-locking"))
                (:file "pg-import" :depends-on ("variables" "sbcl" "clisp"))))
