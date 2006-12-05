@@ -1,6 +1,14 @@
 (in-package #:autobench)
 
 (defvar *version-translations*)
+(defparameter *suppress-pg-errors-on-import* t
+  "Parameter specifying whether or not to suppress duplicate key
+  constraint and other errors when importing a build into the
+  database. Required to be T in normal operation.")
+(defparameter *suppress-pg-errors-on-import-benchmark* t
+  "Parameter specifying whether or not to suppress duplicate key
+  constraint and other errors when importing benchmarks into
+  the database. Required to be T in normal operation.")
 
 
 ;;; the release-p methods should soon expire...
@@ -23,7 +31,7 @@
                (subseq vnum 0 (position #\. vnum :from-end t))))
       (cond
         ((eql (length "1.0.0")
-              (mismatch "1.0" vnum))
+              (mismatch "1.0.0" vnum))
          ;; the 1.0 release really should have been 1.0.0.
          "1.0")
         ((search "pre" vnum)
@@ -60,24 +68,48 @@
           (cdr v)
           version))))
 
-(defmacro ignore-pg-errors (&rest body)
+(defmacro handle-pg-errors (((&rest condition-spec) &body handler-body) &body body)
+  "Handle pg::backend-error and pg::error-response with the same handler-body."
   `(handler-case (progn ,@body)
-     (pg::backend-error () nil)
-     (pg::error-response () nil)))
+     (pg::backend-error (,@condition-spec) ,@handler-body)
+     (pg::error-response (,@condition-spec) ,@handler-body)))
 
-(defun import-release-into-db (impl date mode)
-  (ignore-pg-errors
-   (pg-exec (db-connection) (format nil "insert into impl values ('~A', (select max(field_offset)+2 from impl))" (impl-name impl))))
-  (ignore-pg-errors
-   (pg-exec (db-connection) (format nil "insert into version (i_name, version, release_date, is_release, belongs_to_release) values ('~A', '~A', ~A, ~A, '~A')"
-                             (impl-name impl) (impl-version impl) date
-                             (if (release-p impl) "TRUE" "FALSE")
-                             (release-for-version impl))))
-  (ignore-pg-errors
-   (pg-exec (db-connection) (format nil "insert into build (v_name, v_version, mode) values ('~A', '~A', '~A')"
-                             (impl-name impl) (impl-version impl) mode))))
+(defmacro ignore-pg-errors (&rest body)
+  `(handle-pg-errors ((c) (values nil c))
+     ,@body))
 
-(defun read-benchmark-data (dir machine-name)
+(define-condition pg-error (error)
+  ((cause :initarg :cause :accessor pg-error-cause)
+   (statement :initarg :statement :accessor pg-error-statement))
+  (:report (lambda (c s)
+             (format s "Caught PG error ~A~%executing statement ~S."
+                     (pg-error-cause c) (pg-error-statement c)))))
+
+(defmacro optionally-suppressing-pg-errors ((condition &rest error-initargs) &body body)
+  `(cond (,condition (ignore-pg-errors ,@body))
+         (t (with-simple-restart (suppress-anyway "Condition would have been suppressed. Continue anyway.")
+              (handle-pg-errors ((c) (error 'pg-error :cause c ,@error-initargs))
+                ,@body)))))
+
+(defun run-statement/suppressing-errors (suppress-errors-p statement-formatspec &rest statement-args)
+  (let ((statement (apply #'format nil statement-formatspec statement-args)))
+    (optionally-suppressing-pg-errors (suppress-errors-p :statement statement)
+      (pg-exec (db-connection) statement))))
+
+(defun import-release-from-dir (impl dir &key (suppress-errors-p *suppress-pg-errors-on-import*))
+  (run-statement/suppressing-errors suppress-errors-p
+                                    "insert into impl values ('~A', (select max(field_offset)+2 from impl))"
+                                    (impl-name impl))
+  (run-statement/suppressing-errors suppress-errors-p
+                                    "insert into version (i_name, version, release_date, is_release, belongs_to_release) values ('~A', '~A', ~A, ~A, '~A')"
+                                    (impl-name impl) (impl-version impl) (implementation-release-date impl dir)
+                                    (if (release-p impl) "TRUE" "FALSE")
+                                    (release-for-version impl))
+  (run-statement/suppressing-errors suppress-errors-p
+                                    "insert into build (v_name, v_version, mode) values ('~A', '~A', '~A')"
+                                    (impl-name impl) (impl-version impl) (implementation-translated-mode impl)))
+
+(defun read-benchmark-data (&optional (dir *base-result-dir*) (machine-name (machine-instance)))
   (dolist (file (directory (merge-pathnames #p"CL-benchmark*.*" dir)))
     (with-open-file (s file :direction :input)
       (let ((*read-eval* nil)
@@ -90,20 +122,17 @@
             (destructuring-bind (impl mode version &rest benchmark) (read s :eof-error-p nil)
               (destructuring-bind (i-name version) (translate-version (list impl version))
                 (let ((mtime (file-write-date file)))
-                  ;; first, make sure the benchmark exists; we don't
-                  ;; do this below, because we insert all values in
-                  ;; one transaction. benchmarks should be inserted
-                  ;; regardless of psql errors.
+                  ;; first, make sure the benchmark exists.
                   (dolist (b benchmark)
                     (destructuring-bind (b-name r-secs u-secs &rest ignore) b
                       (declare (ignore r-secs ignore u-secs))
-                      (ignore-pg-errors
-                       (pg-exec (db-connection) (format nil "insert into benchmark (name) values ('~A')" b-name)))))
+                      (run-statement/suppressing-errors *suppress-pg-errors-on-import-benchmark*
+                                                        "insert into benchmark (name) values ('~A')" b-name)))
+                  ;; now insert the actual benchmark data - all in one transaction.
                   (with-pg-transaction (db-connection)
                     (dolist (b benchmark)
                       (destructuring-bind (b-name r-secs u-secs &rest ignore) b
                         (declare (ignore r-secs ignore))
-				  
                         (pg-exec (db-connection) (format nil "insert into result (date, v_name, v_version, mode, b_name, m_name, seconds) ~
                                                        values (~A, '~A', '~A', '~A', '~A', '~A', ~f)"
                                                    mtime i-name version mode b-name machine-name u-secs))))))))
@@ -111,17 +140,3 @@
     (rename-file file (ensure-directories-exist
                        (merge-pathnames (make-pathname :name (pathname-name file))
                                         *archived-result-dir*)))))
-
-;;; stand-alone stuff.
-#+(or)
-(dolist (machine-dir (remove-duplicates
-		      (mapcar (lambda (file)
-				(list (first (last (pathname-directory file)))
-				      (pathname-directory file)))
-			      (directory *base-result-dir*))
-		      :test #'equal))
-  (destructuring-bind (machine dir) machine-dir
-    (read-benchmark-data (make-pathname :directory dir)
-			 machine)))
-
-;;; arch-tag: "9a7ec82b-ff30-11d8-8b1b-000c76244c24"

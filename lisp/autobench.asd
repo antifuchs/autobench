@@ -16,8 +16,10 @@
                (:file "sbcl" :depends-on ("variables" "implementation" "vc"))
                (:file "cmucl" :depends-on ("variables" "implementation"))
                (:file "clisp" :depends-on ("variables" "implementation" "vc"))
-               (:file "autobuilder" :depends-on ("implementation" "util"))
-               (:file "txt-sql" :depends-on ("variables" "sbcl" "clisp"))))
+               (:file "file-locking" :depends-on "package")
+               (:file "autobuilder"
+                      :depends-on ("implementation" "util" "file-locking"))
+               (:file "pg-import" :depends-on ("variables" "sbcl" "clisp"))))
 
 (defmethod perform :after ((op load-op) (c (eql (find-system :autobench))))
   (let ((init-file (symbol-value (intern "*USER-LOCAL-INIT-FILE*" :autobench))))
