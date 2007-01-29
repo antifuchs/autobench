@@ -303,7 +303,7 @@
                  (h2 "Release")
                  (p
                   ,(make-select :only-release only-release
-                                (releases-for-implementations host implementations)))
+                                (tested-releases-for-implementations host implementations)))
                  (p
                   ((|input| :type "submit" :value "Graph")))
                  (h2 "Syndicate (atom 1.0)")
@@ -360,7 +360,7 @@
                           (terpri s)))))))
   t)
 
-(defun releases-for-implementations (host implementations)
+(defun tested-releases-for-implementations (host implementations)
   `((nil "All releases")
     ,@(iterate (for (version date steps) in-relation
                     (translate*
@@ -474,7 +474,7 @@
           (request-send-headers request
                                 :expires  (+ 1200 (get-universal-time))
                                 :content-type "application/xhtml+xml; charset=utf-8"
-                                :last-modified *latest-result*
+                                :last-modified (or *latest-result* 0)
                                 :conditional t) 
           (let ((s (request-stream request)))
             ;; (format s "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\" \"http://www.w3.org/TR/html4/loose.dtd\">")
@@ -504,8 +504,8 @@
         else
           collect `((option :value ,op) ,text)))
 
+;;;; ajaxy stuff
 (defclass release-handler (handler) ())
-
 (defclass implementation-handler (handler) ())
 
 (defmethod handle-request-response ((handler release-handler) method request)
@@ -515,7 +515,8 @@
       (when (and host implementations)
         (mapcar (lambda (elt) (html-stream (request-stream request) elt))
                 (make-select-options nil
-                                     (releases-for-implementations host implementations)))))))
+                                     (tested-releases-for-implementations
+                                      host implementations)))))))
 
 (defmethod handle-request-response ((handler implementation-handler) method request)
   (with-db-connection *dbconn*
@@ -524,12 +525,10 @@
         (mapcar (lambda (elt) (html-stream (request-stream request) elt))
                 (make-select-options nil
                                      (mapcar (lambda (impl) (list impl (pprint-impl-and-mode impl))) (all-implementations-of-host host))))))))
-
+ 
+;;;; The sitemap.
 (araneida:attach-hierarchy (http-listener-handler *bench-listener*) *internal-base-url* *base-url*
   ("/" index-handler)
   ("/ajax/releases/" release-handler)
   ("/ajax/implementations/" implementation-handler)
   ("/atom/"  atom-handler))
-
-
-;; arch-tag: 05bed3a0-4ebb-4dc6-8308-3033a1c00f65
