@@ -52,29 +52,34 @@
                       (funcall function s-impl dir)))))
 
 (defun build-and-benchmark-1 (base-implementation &key directory strategies (additional-predicate (constantly t)) version-specs)
-  
   (with-locked-pathname (directory)
     (apply
      (if version-specs
          #'map-over-given-versions-in-dir
          #'map-over-all-versions-in-dir)
      (lambda (impl dir)
-       (handler-case (progn
-                       (debug* "~&~A ~A/~S: " (get-universal-time) impl (impl-mode impl))
-                       (unless (implementation-already-built-p impl)
-                         (debug* "Build:")
-                         (build-in-directory impl dir)
-                         (debug* "OK "))
-                       (import-release-from-dir impl directory)
-                       (debug* "BM~A:" *run-benchmark-n-times*) 
-                       (dotimes (i *run-benchmark-n-times*)
-                         (run-benchmark impl)
-                         (debug* "~A" i))
-                       (read-benchmark-data *base-result-dir* (machine-instance)))
-         (implementation-unbuildable ()
-           (format *debug-io* "can't build ~A~%" impl))
-         (program-exited-abnormally (c)
-           (format *debug-io* "Something else went wrong when autobuilding/benchmarking ~A:~% ~A~%" impl c))))
+       (let ((manual-failed nil))
+         (handler-case (progn
+                         (debug* "~&~A ~A/~S: " (get-universal-time)
+                                 (string-downcase (prin1-to-string impl))
+                                 (string-downcase (prin1-to-string (impl-mode impl))))
+                         (unless (implementation-already-built-p impl)
+                           (debug* "build:")
+                           (handler-bind ((manual-unbuildable
+                                           (lambda (c)
+                                             (setq manual-failed t))))
+                             (build-in-directory impl dir))
+                           (debug* "ok~@[/NO MANUAL~] " manual-failed))
+                         (import-release-from-dir impl directory)
+                         (debug* "bm~A:" *run-benchmark-n-times*) 
+                         (dotimes (i *run-benchmark-n-times*)
+                           (run-benchmark impl)
+                           (debug* "~A" i))
+                         (read-benchmark-data *base-result-dir* (machine-instance)))
+           (implementation-unbuildable ()
+             (format *debug-io* "FAIL:~A~%" impl))
+           (program-exited-abnormally (c)
+             (format *debug-io* "~&WEIRD ERROR during ~A:~% ~A~%" impl c)))))
      base-implementation strategies additional-predicate directory
      version-specs)))
 

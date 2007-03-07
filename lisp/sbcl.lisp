@@ -129,31 +129,26 @@
 	    (#p"sbcl.core" . #p"output/sbcl.core"))
 	  :test 'equal)))
 
-;;; stuff for autobuilding on walrus. not for everybody, I think...
-
-(defun send-mail-to (address subject)
-  ;; TODO: send mail. No idea how to do that, yet
-  (format t "Would have sent mail to ~s with subject ~S~%" address subject))
+;;; stuff for autobuilding on the main host. not for everybody, I think...
 
 (defun build-sbcl-manual (impl dir)
-  (with-unzipped-implementation-files impl
-    (invoke-logged-program "sbcl-build-manual" (namestring (merge-pathnames #p"scripts/sbcl-build-manual" *base-dir*))
-                           `(,(namestring dir) "antifuchs"
-                              ,@(mapcar (lambda (f) (namestring (implementation-cached-file-name impl f)))
-                                       (implementation-required-files impl)))
-                           :environment `(,@(prepare-sbcl-environment)))))
+  (handler-case
+      (with-unzipped-implementation-files impl
+        (invoke-logged-program "sbcl-build-manual" (namestring (merge-pathnames #p"scripts/sbcl-build-manual" *base-dir*))
+                               `(,(namestring dir) "antifuchs"
+                                  ,@(mapcar (lambda (f) (namestring (implementation-cached-file-name impl f)))
+                                            (implementation-required-files impl)))
+                               :environment `(,@(prepare-sbcl-environment))))
+    (program-exited-abnormally (c)
+      (error 'manual-unbuildable :implementation impl))))
 
 (defmethod build-in-directory :around ((impl sbcl) dir)
   "If this is the last revision, build the manual and report a
 possible build failure to *SBCL-DEVELOPERS*."
   (if (and (not (has-next-directory-p impl dir))
            (equalp "baker" (machine-instance))) ;; only makes sense on one autobuild host
-      (handler-case (progn (call-next-method impl dir)
-                           (build-sbcl-manual impl dir))
-        (implementation-unbuildable (e)
-          (send-mail-to *sbcl-developers* (format nil "Can't build ~A" (unbuildable-implementation e))))
-        (program-exited-abnormally (e)
-          (send-mail-to *sbcl-developers* (format nil "Can't build manual for ~A: ~A" impl e))))
+      (progn (call-next-method impl dir)
+             (build-sbcl-manual impl dir)) 
       (call-next-method impl dir)))
 
 ;;; arch-tag: "3c5332be-00b6-11d9-a66e-000c76244c24"

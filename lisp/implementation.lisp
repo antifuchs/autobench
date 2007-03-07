@@ -8,6 +8,9 @@
 (define-condition implementation-unbuildable ()
   ((implementation :accessor unbuildable-implementation :initarg :implementation)))
 
+(define-condition manual-unbuildable ()
+  ((implementation :accessor unbuildable-implementation :initarg :implementation)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; The implementation protocol - methods that have to be overridden
 ;;; when a new implementation is added
