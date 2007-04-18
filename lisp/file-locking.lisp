@@ -64,8 +64,9 @@ lockfile.
 
 When RECURSIVEP is passed, behave as if the lockfile was just
 created, if the lockfile is already held."
-  (common-idioms:with-gensyms (pathname* host-name* pid* namestring)
+  (common-idioms:with-gensyms (pathname* host-name* pid* namestring successp)
     `(let* ((,host-name* ,host-name)
+	    (,successp t)
             (,pid* ,pid)
             (,namestring (namestring ,pathname))
             (,pathname* (pathname (format nil "~A.lck"
@@ -75,7 +76,11 @@ created, if the lockfile is already held."
                                                            (char ,namestring
                                                                  (1- (length ,namestring))))
                                                       (1- (length ,namestring))))))))
-       (unwind-protect (progn (create-lock-file ,pathname* :host-name ,host-name* :pid ,pid*
-                                                :recursivep ,recursivep)
-                              ,@body)
-         (remove-lock-file ,pathname* :host-name ,host-name* :pid ,pid*)))))
+       (unwind-protect (handler-case
+                            (progn (create-lock-file ,pathname* :host-name ,host-name* :pid ,pid*
+                                                     :recursivep ,recursivep)
+                                   ,@body)
+	                  (already-locked (c)
+			     (setf ,successp nil)
+		             (error c)))
+         (when ,successp (remove-lock-file ,pathname* :host-name ,host-name* :pid ,pid*))))))
