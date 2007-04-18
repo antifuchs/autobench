@@ -134,13 +134,18 @@
 (defun build-sbcl-manual (impl dir)
   (handler-case
       (with-unzipped-implementation-files impl
-        (invoke-logged-program "sbcl-build-manual" (namestring (merge-pathnames #p"scripts/sbcl-build-manual" *base-dir*))
+        (invoke-logged-program "sbcl-build-manual"
+                               (namestring (merge-pathnames #p"scripts/sbcl-build-manual"
+                                                            *base-dir*))
                                `(,(namestring dir) "antifuchs"
-                                  ,@(mapcar (lambda (f) (namestring (implementation-cached-file-name impl f)))
+                                  ,@(mapcar (lambda (f)
+                                              (namestring
+                                               (implementation-cached-file-name impl f)))
                                             (implementation-required-files impl)))
                                :environment `(,@(prepare-sbcl-environment))))
     (program-exited-abnormally (c)
-      (error 'manual-unbuildable :implementation impl))))
+      (with-simple-restart (ignore "Ignore failed build of manual.")
+        (error 'manual-unbuildable :implementation impl)))))
 
 (defmethod build-in-directory :around ((impl sbcl) dir)
   "If this is the last revision, build the manual and report a

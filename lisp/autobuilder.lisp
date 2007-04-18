@@ -60,14 +60,15 @@
      (lambda (impl dir)
        (let ((manual-failed nil))
          (handler-case (progn
-                         (debug* "~&~A ~A/~S: " (get-universal-time)
+                         (debug* "~&~A ~A/~A: " (get-universal-time)
                                  (string-downcase (prin1-to-string impl))
                                  (string-downcase (prin1-to-string (impl-mode impl))))
                          (unless (implementation-already-built-p impl)
                            (debug* "build:")
                            (handler-bind ((manual-unbuildable
                                            (lambda (c)
-                                             (setq manual-failed t))))
+                                             (setq manual-failed t)
+                                             (invoke-restart 'ignore))))
                              (build-in-directory impl dir))
                            (debug* "ok~@[/NO MANUAL~] " manual-failed))
                          (import-release-from-dir impl directory)
