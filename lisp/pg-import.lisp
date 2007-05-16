@@ -50,10 +50,18 @@
 (defmethod release-for-version ((impl clisp))
   (let ((vnum (impl-version impl)))
     ;; release versions look like clisp.2.25-2001-03-15
-    ;; non-release versions:      clisp.2.41-2006-10-13-g0126e2a
+    ;; non-release versions:      clisp.2.41-2006-10-13-nn-g0126e2a
+    (labels ((match-nth (n elt)
+                    (lambda (element)
+                      (cond ((and (eql element elt)
+                                  (zerop n))
+                             t)
+                            ((eql element elt)
+                             (decf n)
+                             nil)))))
     (cond
       ((= (count #\- vnum) 3) vnum)
-      (t (subseq vnum 0 (position #\- vnum :from-end t))))))
+      (t (subseq vnum 0 (position-if (match-nth 1 #\-) vnum  :from-end t)))))))
 
 
 (defun translate-version (version)

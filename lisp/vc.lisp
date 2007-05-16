@@ -53,6 +53,7 @@ VERSION-SPEC must contain a git tag or commit id."
          :end (position #\+ date-line :from-end t))))))
 
 (defmethod version-from-directory ((impl git-vc-mixin) directory)
+  "Returns the output of 'git describe' for the current changeset in DIRECTORY."
   (declare (ignore impl))
   (with-current-directory directory
     (with-input-from-program (description *git-binary* "describe")
