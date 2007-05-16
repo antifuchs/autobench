@@ -92,29 +92,31 @@
              (sb-ext:posix-environ)
              :key (lambda (envl) (subseq envl 0 (position #\= envl)))))
 
-(defun prepare-bench-sbcl-cmdline (impl shell-quote-p)
-  (list (format nil "~A" (shellquote (namestring (implementation-cached-file-name impl "sbcl")) shell-quote-p))
-        "--core" (shellquote (namestring (implementation-cached-file-name impl "sbcl.core")) shell-quote-p)
-        "--userinit" "/dev/null" "--disable-debugger"
-        "--boink-core-file" (shellquote (namestring (implementation-cached-file-name impl "sbcl.core")) shell-quote-p)
-        "--boink-implementation-type" (shellquote (implementation-translated-mode impl) shell-quote-p)))
+(defun prepare-bench-sbcl-cmdline (impl arch shell-quote-p)
+  `(,(format nil "~A" (shellquote (namestring (implementation-cached-file-name impl "sbcl")) shell-quote-p))
+     "--core" ,(shellquote (namestring (implementation-cached-file-name impl "sbcl.core")) shell-quote-p)
+     ,@(if (member arch '(:emulated-x86 :x86))
+           (list "--dynamic-space-size" "2000"))
+     "--userinit" "/dev/null" "--disable-debugger"
+     "--boink-core-file" ,(shellquote (namestring (implementation-cached-file-name impl "sbcl.core")) shell-quote-p)
+     "--boink-implementation-type" ,(shellquote (implementation-translated-mode impl) shell-quote-p)))
 
 (defmethod run-benchmark/arch ((impl sbcl) (arch (eql :emulated-x86)))
   (with-unzipped-implementation-files impl
     (invoke-logged-program "bench-sbcl" (merge-pathnames #p"scripts/run-in-32bit" *base-dir*)
-                           `("./run-sbcl.sh" ,@(prepare-bench-sbcl-cmdline impl t))
+                           `("./run-sbcl.sh" ,@(prepare-bench-sbcl-cmdline impl arch t))
                            :environment (prepare-sbcl-environment))))
 
 (defmethod run-benchmark/arch ((impl sbcl) (arch (eql :x86_64)))
   (with-unzipped-implementation-files impl
     (invoke-logged-program "bench-sbcl" "/usr/bin/env"
-                           `("./run-sbcl.sh" ,@(prepare-bench-sbcl-cmdline impl nil))
+                           `("./run-sbcl.sh" ,@(prepare-bench-sbcl-cmdline impl arch nil))
                            :environment (prepare-sbcl-environment))))
 
 (defmethod run-benchmark/arch ((impl sbcl) arch)
   (with-unzipped-implementation-files impl
     (invoke-logged-program "bench-sbcl" "/usr/bin/env"
-                           `("./run-sbcl.sh" ,@(prepare-bench-sbcl-cmdline impl nil))
+                           `("./run-sbcl.sh" ,@(prepare-bench-sbcl-cmdline impl arch nil))
                            :environment (prepare-sbcl-environment))))
 
 (defmethod implementation-required-files ((impl sbcl))
