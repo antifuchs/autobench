@@ -2,13 +2,9 @@
 
 ## scaffolding for building clisp. Assumes PWD is the clisp base dir.
 
-CONFFLAGS=--without-readline
+CONFFLAGS='--without-readline --with-module=rawsock --build'
 
 CC=${1:-gcc}
 export CC
 
 ./configure $CONFFLAGS
-cd src
-sh ./makemake $CONFFLAGS > Makefile
-make config.lisp
-make all
