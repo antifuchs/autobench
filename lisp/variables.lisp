@@ -26,13 +26,12 @@ A remote autobench machine will have this set to #'ensure-ssh-tunnel-connected,
 and customize the variables documented in e-s-t-c's docstring.")
 
 (defparameter *db-default-user-name* (machine-case
-                                      ("baker" "sbcl-arch")))
+                                      ("baker" "autobench")))
 
 ;;; base directory of the sb-bench installation
 (defparameter *base-dir* (machine-case
-                          ("walrus.boinkor.net" #p"/home/sbcl-arch/autobench/")
                           ("beaver" #p"/home/asf/hack/sb-bench/")
-                          ("baker" #p"/home/sbcl-arch/autobench/")))
+                          (otherwise (merge-pathnames #p"autobench/" (user-homedir-pathname)))))
 
 ;;; Machine-dependent stuff
 (defparameter *unpack-binary* (machine-case
