@@ -64,7 +64,7 @@ lockfile.
 
 When RECURSIVEP is passed, behave as if the lockfile was just
 created, if the lockfile is already held."
-  (common-idioms:with-gensyms (pathname* host-name* pid* namestring successp)
+  (with-gensyms (pathname* host-name* pid* namestring successp)
     `(let* ((,host-name* ,host-name)
 	    (,successp t)
             (,pid* ,pid)

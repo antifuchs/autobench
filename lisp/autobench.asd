@@ -6,7 +6,7 @@
 (cl:in-package #:autobench-system)
 
 (defsystem autobench
-  :depends-on (pg sb-posix split-sequence sb-md5 common-idioms iterate net-telent-date)
+  :depends-on (pg sb-posix split-sequence sb-md5 alexandria iterate net-telent-date)
   :components ((:file "package")
                (:file "variables" :depends-on ("package"))
                (:file "connection" :depends-on ("package" "variables"))

@@ -1,5 +1,5 @@
 (cl:defpackage #:autobench
-  (:use #:cl #:pg #:common-idioms #:iterate)
+  (:use #:cl #:pg #:alexandria #:iterate)
   (:export #:build-and-benchmark #:benchmark-versions #:read-benchmark-data
            #:connect-to-database #:md5-pathname-component
            #:import-release-from-dir
