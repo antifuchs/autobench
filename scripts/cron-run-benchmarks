@@ -2,9 +2,12 @@
 
 SBCL="${SBCL:-sbcl}"
 
-$SBCL --noinform --disable-debugger --noprint --userinit /dev/null --sysinit /dev/null <<EOF
+umask 002
+
+$SBCL --userinit /dev/null --sysinit /dev/null <<EOF
 (require :asdf)
 (handler-bind ((style-warning #'muffle-warning))
+  (asdf:oos 'asdf:load-op :sb-grovel :verbose nil)
   (asdf:oos 'asdf:load-op :autobench :verbose nil))
 (autobench:build-and-benchmark)
 (sb-ext:quit)
