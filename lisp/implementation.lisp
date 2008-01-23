@@ -150,8 +150,8 @@ After control leaves BODY, chdirs back to the old value of *d-p-d*."
       (declare (ignore day daylight-p zone))
       (let ((output-pathname (merge-pathnames
 			      (make-pathname
-			       :name (format nil "~A_~4,1,0,'0@A-~2,1,0,'0@A-~2,1,0,'0@AT~2,1,0,'0@A:~2,1,0,'0@A:~2,1,0,'0@A"
-					     step-name year month date hour minute second))
+			       :name (format nil "~4,1,0,'0@A-~2,1,0,'0@A-~2,1,0,'0@AT~2,1,0,'0@A:~2,1,0,'0@A:~2,1,0,'0@A_~A"
+					     year month date hour minute second step-name))
 			      *log-directory*)))
 	(ensure-directories-exist output-pathname)
 	(let ((proc (sb-ext:run-program program args
