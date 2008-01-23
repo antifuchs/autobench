@@ -52,7 +52,7 @@
         (error 'implementation-unbuildable :implementation impl))))
   impl)
 
-(defmethod build-in-directory/arch ((impl clisp) dir (eql arch :x86-64))
+(defmethod build-in-directory/arch ((impl clisp) dir (arch (eql :x86-64)))
   (with-current-directory dir
     (handler-case
         (invoke-logged-program "build-clisp"
