@@ -52,6 +52,18 @@
         (error 'implementation-unbuildable :implementation impl))))
   impl)
 
+(defmethod build-in-directory/arch ((impl clisp) dir (eql arch :x86-64))
+  (with-current-directory dir
+    (handler-case
+        (invoke-logged-program "build-clisp"
+                               (merge-pathnames #p"scripts/build-clisp"
+                                                *base-dir*)
+                               ;; XXX: won't build on AMD64 otherwise:
+                               '("gcc-3.3" "--disable-mmap"))
+      (program-exited-abnormally ()
+        (error 'implementation-unbuildable :implementation impl))))
+  impl)
+
 (defun clisp-major-version (version)
     (parse-integer version
                    :end (position #\. version)))
