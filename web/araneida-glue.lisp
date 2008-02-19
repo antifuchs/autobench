@@ -6,7 +6,7 @@
 
 (defparameter *site-name* "sbcl.boinkor.net")
 
-(defparameter *prefab-base* #p"/home/sbcl-arch/autobench/+prefab/")
+(defparameter *prefab-base* #p"/home/autobench/space/autobench/+prefab/")
 (defparameter *ploticus-binary* "/usr/bin/ploticus")
 
 (defparameter *localhost-name* "localhost")
@@ -328,8 +328,7 @@
                                   on-connection *dbconn*
                                   cursor-name syndication-cursor)
                              (collect `(li
-                                        ((a :href ,(urlstring-escape
-                                                    (format nil "~A?HOST=~A&IMPLEMENTATION=~A,~A" (urlstring *atom-url*) machine impl mode)))
+                                        ((a :href ,(format nil "~A?~{HOST=~A&amp;IMPLEMENTATION=~A,~A~}" (urlstring *atom-url*) (mapcar #'urlstring-escape (list machine impl mode))))
                                          ,(format nil "~A/~A" machine (pprint-impl-and-mode (format nil "~A,~A" impl mode)))))))))))
              #h('(div :id "content")
                  (iterate (for (benchmark unit) in benchmarks)

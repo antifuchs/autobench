@@ -6,7 +6,7 @@
 (cl:in-package #:autobench-web-system)
 
 (defsystem autobench-web
-  :depends-on (autobench pg split-sequence iterate iterate-pg :parenscript araneida common-idioms sexql)
+  :depends-on (autobench pg split-sequence iterate iterate-pg :parenscript araneida alexandria sexql)
   :components ((:file "package")
                (:file "util" :depends-on ("package"))
                (:file "png-frobnicator" :depends-on ("package"))
