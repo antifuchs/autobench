@@ -1,7 +1,8 @@
 (in-package :autobench)
 
 (defclass clisp (implementation git-vc-mixin architecture-mixin)
-     ((name :allocation :class :initform "CLISP")))
+     ((name :allocation :class :initform "CLISP")
+      (host-compiler :initform "gcc-3.3" :reader host-compiler)))
 
 (defmethod version-from-directory :around ((impl clisp) dir)
   (let ((version (call-next-method)))
@@ -14,17 +15,21 @@
       (invoke-logged-program (format nil "git-clean-~A" (impl-name impl))
                              *git-binary* `("clean" "-d" "-x" ".")))))
 
+(defun pathname-with-host (pn impl)
+  (merge-pathnames pn (make-pathname
+                       :directory `(:relative ,(host-compiler impl)))))
+
 (defmethod implementation-required-files ((impl clisp))
-  (declare (ignore impl))
-  (list #p"base/lisp.run"
-        #p"base/lispinit.mem"))
+  '(#p"base/lisp.run"
+    #p"base/lispinit.mem"))
 
 (defmethod implementation-file-in-builddir ((impl clisp) pathname)
-  (declare (ignore impl))
   (cdr
    (assoc pathname
-          '((#p"base/lisp.run" . #p"src/base/lisp.run")
-            (#p"base/lispinit.mem" . #p"src/base/lispinit.mem"))
+          `((#p"base/lisp.run"
+               . ,(pathname-with-host #p"base/lisp.run" impl))
+            (#p"base/lispinit.mem"
+               . ,(pathname-with-host #p"base/lispinit.mem" impl)))
           :test #'equal)))
 
 (defmethod build-in-directory/arch ((impl clisp) dir (arch (eql :emulated-x86)))
@@ -36,7 +41,7 @@
                           *base-dir*)
          `(,(namestring (merge-pathnames #p"scripts/build-clisp"
                                          *base-dir*))
-            "gcc-3.3"))
+            (host-compiler impl)))
       (program-exited-abnormally ()
         (error 'implementation-unbuildable :implementation impl))))
   impl)
@@ -47,19 +52,19 @@
         (invoke-logged-program "build-clisp"
                                (merge-pathnames #p"scripts/build-clisp"
                                                 *base-dir*)
-                               '("gcc-3.3"))
+                               `(,(host-compiler impl)))
       (program-exited-abnormally ()
         (error 'implementation-unbuildable :implementation impl))))
   impl)
 
-(defmethod build-in-directory/arch ((impl clisp) dir (arch (eql :x86-64)))
+(defmethod build-in-directory/arch ((impl clisp) dir (arch (eql :x86_64)))
   (with-current-directory dir
     (handler-case
         (invoke-logged-program "build-clisp"
                                (merge-pathnames #p"scripts/build-clisp"
                                                 *base-dir*)
                                ;; XXX: won't build on AMD64 otherwise:
-                               '("gcc-3.3" "--disable-mmap"))
+                               `(,(host-compiler impl) "--disable-mmap"))
       (program-exited-abnormally ()
         (error 'implementation-unbuildable :implementation impl))))
   impl)

@@ -48,7 +48,14 @@ implementation can not be built."))
 (defgeneric implementation-file-in-builddir (implementation file-name)
   (:documentation "Returns the pathname (relative to the build
   directory base) in which FILE-NAME resides after IMPLEMENTATION
-  is finished building."))
+  is finished building.")
+  (:method :around (impl pathname)
+    (assert (member pathname (implementation-required-files impl)
+                    :test #'equal)
+            (pathname)
+            "~A is not a required file of implementation ~A"
+            pathname impl)
+    (call-next-method)))
 
 (defgeneric implementation-release-date (implementation directory)
   (:documentation "Returns the UNIVERSAL-DATE on which
