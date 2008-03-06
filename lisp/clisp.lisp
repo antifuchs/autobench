@@ -13,7 +13,7 @@
    (call-next-method)
     (with-current-directory directory
       (invoke-logged-program (format nil "git-clean-~A" (impl-name impl))
-                             *git-binary* `("clean" "-d" "-x" ".")))))
+                             *git-binary* `("clean" "-d" "-x" "-f" ".")))))
 
 (defun pathname-with-host (pn impl)
   (merge-pathnames pn (make-pathname
