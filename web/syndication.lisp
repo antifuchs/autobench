@@ -17,7 +17,7 @@
   (let ((percentage (round (* 100 (/ (abs (- to from))
                                     (max from to))))))
     `(|li| ,(format nil "<a href=\"~A\">~A</a> ~
-                       ~A from (~@? &#xb1; ~@?)~A to (~@? &#xb1; ~@?)~A (~A~A%)" 
+                       ~A from (~@?~:[~2*~; &#xb1; ~@?~])~A to (~@?~:[~2*~; &#xb1; ~@?~])~A (~A~A%)" 
                     (html-escape (format nil "~A?HOST=~A&IMPLEMENTATIONS=~A~@[&ONLY-RELEASE=~A~]#~A"
                                          (urlstring *base-url*) host impl
                                          (unless release-p
@@ -26,9 +26,11 @@
                     benchmark
                     (if (< from to) "<span style=\"color:#FF0000;\">increased</span>" "<span style=\"color:#00FF00;\">decreased</span>")
                     (digits-format-string from f-err) from
+		    (>= f-err 1/1000)
                     (digits-format-string from f-err) f-err
                     unit 
                     (digits-format-string to t-err) to
+		    (>= t-err 1/1000)
                     (digits-format-string to t-err) t-err
                     unit
                     (if (< from to) "+" "-") percentage))))
