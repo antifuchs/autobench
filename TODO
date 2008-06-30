@@ -1,3 +1,9 @@
+* Move to hunchentoot
+
+* Add ECL support
+
+* Add ability to limit output by date range
+
 * lots of experiments {-:
 
 * <Xophe> antifuchs: another (more blue-sky TODO): an option to plot the x-axis by date rather than by version increment
