@@ -2,7 +2,7 @@
 
 ## scaffolding for building clisp. Assumes PWD is the clisp base dir.
 
-CONFFLAGS="$@ --without-readline --with-module=rawsock --build"
+CONFFLAGS="$@ --without-readline --with-module=rawsock --cbc"
 
 CC=${1:-gcc}
 export CC
