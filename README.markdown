@@ -22,18 +22,8 @@ of my stupid bugs.
 
 If you have all that,
 
-* Get&install canonical's bazaar1 implementation at [the bazaar
-  wiki](http://bazaar.canonical.com/Downloads). I strongly recommend
-  getting a "Development" tarball, as the 1.4 release has a very bad
-  bug concerning updates to a specific revision, which the sbcl build
-  process uses. Get the debian packages or the mac os x build, these
-  are fine.
-
-* Register the autobench archive:
-  `$ baz register-archive http://boinkor.net/lisp/boinkmarks@boinkor.net--2005`
-
-* Get the sources and link them to your ~/.sbcl/systems/:
-  * `$ baz get boinkmarks@boinkor.net--2005/boinkmarks--main--0 autobench`
+* Get autobench and link the autobench system to where asdf can find them:
+  `$ git clone git://github.com/antifuchs/autobench.git`
   * `$ ln -sf $(pwd)/autobench/lisp/autobench.asd ~/.sbcl/systems/`
 
 * Get its dependencies:
@@ -160,15 +150,13 @@ you can start...
 
 ### Auto-Building SBCL ###
 
-The SBCL autobuilder uses [the sbcl arch
-archive](http://boinkor.net/SBCL-in-arch.html) as a changeset
-source. Good thing you got bazaar in the previous steps, right?
+The SBCL autobuilder uses [the sbcl git
+archive](http://git.boinkor.net/gitweb/sbcl.git) as a changeset
+source.
 
-* Register the archives:
-  * `$ for i in 4-2 5 ; do baz register-archive http://sbcl.boinkor.net/sbcl@boinkor.net--200$i/ ; done`
-
-* check out (e.g. the first sbcl 0.9.0 revision):
-  * `$ baz get sbcl@boinkor.net--2005/sbcl--main--0.9--base-0 /wherever/sbcl-0.9`
+* check out (e.g. to start with the sbcl 0.9.0 release):
+  * `$ git clone git://git.boinkor.net/sbcl.git sbcl-0.9`
+  * `$ cd sbcl-0.9 ; git reset --hard 0.9.0^`
 
 * Use `/wherever/sbcl-0.9/` as the directory on *implementations-to-build* in your ~/.autobench.lisp.
 
