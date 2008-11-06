@@ -6,6 +6,8 @@
 # expects SSH_SSH_AUTH_SOCK and SSH_AGENT_PID to be set to reasonable
 # values, so auto-uploading works.
 
+exit 0   # No autobuilding of the manual anymore!
+
 DIR=$1; shift
 UPLOADER_NAME=$1; shift
 SBCL_BINARY=$1; shift
@@ -41,7 +43,7 @@ cd ../internals
 tar zcf sbcl-internals.tgz sbcl-internals
 
 sleep 20
-cat "$DIR"/doc/manual/sbcl-manual.tgz | ssh $UPLOADER_NAME@shell.sourceforge.net cd /home/groups/s/sb/sbcl/htdocs ";" tar zxf -
-cat "$DIR"/doc/internals/sbcl-internals.tgz | ssh $UPLOADER_NAME@shell.sourceforge.net cd /home/groups/s/sb/sbcl/htdocs ";" tar zxf -
+cat "$DIR"/doc/manual/sbcl-manual.tgz | ssh $UPLOADER_NAME,sbcl@shell.sourceforge.net cd /home/groups/s/sb/sbcl/htdocs ";" tar zxf -
+cat "$DIR"/doc/internals/sbcl-internals.tgz | ssh $UPLOADER_NAME,sbcl@shell.sourceforge.net cd /home/groups/s/sb/sbcl/htdocs ";" tar zxf -
 
 # arch-tag: "100855f9-ff31-11d8-8b1b-000c76244c24"
