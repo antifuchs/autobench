@@ -46,18 +46,8 @@ the DB maintainer, installed the public key in the right place, and have customi
 
 (defvar *default-db-connection* nil)
 
-(defun db-connection ()
-  "Return the default database connection; if none was made yet, connect and return the new connection."
-  (when (null *default-db-connection*)
-    (setf *default-db-connection* (connect-to-database)))
-  *default-db-connection*)
-
-(defun connect-to-database ()
-  (when (funcall *db-connection-setup-function*)
-    (machine-case
-     ("walrus.boinkor.net" (pg-connect "sbcl-arch" "sbcl-arch"))
-     ("beaver" (pg-connect "asf" "asf"))
-     ("baker" (pg-connect "sbcl-arch" "autobench" :host #p"/tmp/"))
-     (otherwise (pg-connect "sbcl-arch" *db-default-user-name* :host "localhost" :port *ssh-port*)))))
-
-;;; arch-tag: "197175bc-1afe-48e5-97a4-904d500c1988"
+(defmacro with-db-connection (()  &body body)
+  `(postmodern:with-connection
+       (list *db-default-database-name* *db-default-user-name*
+             nil "localhost")
+     ,@body))
