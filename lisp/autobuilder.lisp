@@ -76,7 +76,7 @@
                          (dotimes (i *run-benchmark-n-times*)
                            (run-benchmark impl)
                            (debug* "~A" i))
-                         (read-benchmark-data *base-result-dir* (machine-instance)))
+                         (process-benchmark-data))
            (implementation-unbuildable ()
              (format *debug-io* "FAIL:~A~%" impl))
            (program-exited-abnormally (c)
@@ -89,7 +89,7 @@
            (for impl = (apply #'make-instance type :version version initargs))
            (dotimes (i *run-benchmark-n-times*)
 	     (run-benchmark impl))
-           (read-benchmark-data *base-result-dir* (machine-instance))))
+           (process-benchmark-data)))
 
 (defun build-and-benchmark (&key (implementations (mapcar #'first *implementations-to-build*)))
   (loop for implementation in implementations
