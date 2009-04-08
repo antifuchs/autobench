@@ -7,7 +7,11 @@
 
 (defsystem autobench
   :depends-on (postmodern simple-date
-                          sb-posix split-sequence sb-md5 alexandria iterate
+                          #+sbcl sb-posix
+                          split-sequence
+                          #+sbcl sb-md5
+                          #-sbcl md5
+                          alexandria iterate
                           net-telent-date)
   :components ((:file "package")
                (:file "variables" :depends-on ("package"))

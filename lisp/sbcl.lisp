@@ -63,6 +63,7 @@
               (error 'implementation-unbuildable
                      :implementation implementation))))))))
 
+#+sbcl
 (defmethod build-in-directory/arch ((implementation sbcl) dir (arch (eql :emulated-x86)))
   (with-sbcl-build-setup (implementation dir)
     (invoke-logged-program "build-sbcl" (merge-pathnames #p"scripts/run-in-32bit" *base-dir*)
@@ -71,6 +72,7 @@
                                           ,@(sb-ext:posix-environ)))
     implementation))
 
+#+sbcl
 (defmethod build-in-directory/arch ((implementation sbcl) dir (arch (eql :x86_64)))
   (with-sbcl-build-setup (implementation dir)
     (invoke-logged-program "build-sbcl" "make.sh" *sbcl64-build-args*
@@ -78,6 +80,7 @@
                                           ,@(sb-ext:posix-environ)))
     implementation))
 
+#+sbcl
 (defmethod build-in-directory/arch ((implementation sbcl) dir arch)
   (with-sbcl-build-setup (implementation dir)
     (invoke-logged-program "build-sbcl" "make.sh" *sbcl-default-build-args*
@@ -86,13 +89,12 @@
     implementation))
 
 (defun prepare-sbcl-environment ()
-  (nconc 
-   (remove-if (lambda (elt)
-                (member elt '("SBCL_HOME" "LC_CTYPE" "LANGUAGE")
-                        :test #'string-equal))
-              (sb-ext:posix-environ)
-              :key (lambda (envl) (subseq envl 0 (position #\= envl))))
-   (list "LC_CTYPE=C")))
+  (remove-if (lambda (elt)
+               (member elt '("SBCL_HOME" "LC_CTYPE")
+                       :test #'string-equal))
+             #+sbcl(sb-ext:posix-environ)
+             #-sbcl()
+             :key (lambda (envl) (subseq envl 0 (position #\= envl)))))
 
 (defun prepare-bench-sbcl-cmdline (impl arch shell-quote-p)
   `(,(format nil "~A" (shellquote (namestring (implementation-cached-file-name impl "sbcl")) shell-quote-p))
