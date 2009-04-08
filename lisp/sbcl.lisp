@@ -147,7 +147,7 @@
                                                (implementation-cached-file-name impl f)))
                                             (implementation-required-files impl)))
                                :environment `(,@(prepare-sbcl-environment))))
-    (program-exited-abnormally (c)
+    (program-exited-abnormally ()
       (with-simple-restart (ignore "Ignore failed build of manual.")
         (error 'manual-unbuildable :implementation impl)))))
 
