@@ -118,7 +118,6 @@
                                (machine-name (machine-instance)))
   (with-db-connection ()
     (dolist (file (directory (merge-pathnames #p"CL-benchmark*.*" dir)))
-      (format *debug-io* "Running for ~A" file)
       (multiple-value-bind (i-name version mode benchmark)
           (read-benchmark-data file)
         (let ((mtime (simple-date:universal-time-to-timestamp (file-write-date file)))
