@@ -25,8 +25,11 @@ Usage is analogous to that of CASE, except for the lack of an otherwise clause."
 A remote autobench machine will have this set to #'ensure-ssh-tunnel-connected,
 and customize the variables documented in e-s-t-c's docstring.")
 
+(defparameter *db-default-database-name* "autobench")
+
 (defparameter *db-default-user-name* (machine-case
-                                      ("baker" "autobench")))
+                                      ("baker" "autobench")
+                                      ("jubjub.local" "asf")))
 
 ;;; base directory of the sb-bench installation
 (defparameter *base-dir* (machine-case
