@@ -7,6 +7,7 @@
   (:report (lambda (c s)
              (format s "~&Lock file pathname ~A already exists" (already-locked-pathname c)))))
 
+#+sbcl
 (labels ((perform-lockedness-test (pathname contents)
            (let ((read-contents (make-array (1+ (length contents))
                                             :element-type '(unsigned-byte 8))))
@@ -52,7 +53,15 @@
       (perform-lockedness-test pathname (make-lock-file-contents-string host-name pid))
       (delete-file pathname))))
 
-(defmacro with-locked-pathname ((pathname &key (host-name (machine-instance)) (pid (sb-posix:getpid))
+#-sbcl
+(progn
+  (defun create-lock-file (pathname &key host-name pid recursivep)
+    nil)
+
+  (defun remove-lock-file (pathname &key host-name pid)
+    nil))
+
+(defmacro with-locked-pathname ((pathname &key (host-name (machine-instance)) (pid #+sbcl(sb-posix:getpid))
                                           recursivep)
                                 &body body)
   "Executes BODY with a lock file in place for PATHNAME.

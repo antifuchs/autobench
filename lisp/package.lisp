@@ -1,5 +1,7 @@
 (cl:defpackage #:autobench
-  (:use #:cl #:postmodern #:alexandria #:iterate)
+  (:use #:cl #:postmodern #:alexandria #:iterate
+        #+sbcl #:sb-md5
+        #-sbcl #:md5)
   (:export #:build-and-benchmark #:benchmark-versions #:process-benchmark-data
            #:connect-to-database #:md5-pathname-component
            #:import-release-from-dir

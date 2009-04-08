@@ -139,10 +139,10 @@ and the CWD change have dynamic extent.
 After control leaves BODY, chdirs back to the old value of *d-p-d*."
   ;; XXX: first bind, then chdir??
   `(unwind-protect (progn
-		     (sb-posix:chdir ,dir)
+		     #+sbcl(sb-posix:chdir ,dir)
 		     (let ((*default-pathname-defaults* ,dir))
 		       ,@body))
-     (sb-posix:chdir *default-pathname-defaults*)))
+     #+sbcl(sb-posix:chdir *default-pathname-defaults*)))
 
 (define-condition program-exited-abnormally ()
   ((program :accessor failed-program :initarg :program)
@@ -152,7 +152,7 @@ After control leaves BODY, chdirs back to the old value of *d-p-d*."
 	     (format stream "Program invocation ~S ~S exited abnormally with code: ~A"
 		     (failed-program c) (failed-args c) (failed-code c)))))
 
-(defun invoke-logged-program (step-name program args &key (environment (sb-ext:posix-environ)))
+#+sbcl(defun invoke-logged-program (step-name program args &key (environment (sb-ext:posix-environ)))
   (multiple-value-bind (second minute hour date month year day daylight-p zone) (get-decoded-time)
       (declare (ignore day daylight-p zone))
       (let ((output-pathname (merge-pathnames
@@ -166,7 +166,8 @@ After control leaves BODY, chdirs back to the old value of *d-p-d*."
 					:environment environment
 					:output output-pathname
                                         :if-output-exists :supersede
-                                        )))
+                                        )
+                    (error "Running programs is not implemented!")))
 	  (sb-ext:process-wait proc)
 	  (cond
             ((not (zerop (sb-ext:process-exit-code proc)))
@@ -178,6 +179,11 @@ After control leaves BODY, chdirs back to the old value of *d-p-d*."
              (delete-file output-pathname)
              (sb-ext:process-exit-code proc)))))))
 
+#-sbcl
+(defun invoke-logged-program (step-name program args &key environment)
+  (error "Failed at ~A: invoke-logged-program is unimplemented." step-name))
+
+#+sbcl
 (defmacro with-input-from-program ((stream program &rest args) &body body)
   (with-gensyms (proc arg-list)
     `(let* ((,arg-list (list ,@args))
@@ -201,6 +207,10 @@ After control leaves BODY, chdirs back to the old value of *d-p-d*."
 		  :program ,program
 		  :args ,arg-list
 		  :code (sb-ext:process-exit-code ,proc)))))))
+
+#-sbcl
+(defmacro with-input-from-program ((stream program &rest args) &body body)
+  `(error "Can't run with input from program: Unimplemented."))
 
 (defun implementation-already-built-p (impl)
   (every (complement #'null)
@@ -236,7 +246,9 @@ After control leaves BODY, chdirs back to the old value of *d-p-d*."
 
 (defun md5-pathname-component (string &key (external-format :default))
   (format nil "~(~{~2,'0X~}~)"
-          (map 'list #'identity (sb-md5:md5sum-string string :external-format external-format))))
+          (map 'list #'identity
+               #+sbcl(md5sum-string string :external-format external-format)
+               #-sbcl(md5sum-sequence string))))
 
 (defun shellquote (arg quote-p)
   (if quote-p
