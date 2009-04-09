@@ -14,9 +14,9 @@
 <body>
   <!-- TMPL_LOOP benchmarks -->
     <h3><!-- TMPL_VAR benchmark --></h3>
-    <div id="<!-- TMPL_VAR benchmark -->" style="height:300px;width:700px; "></div>
-    <script type="text/javascript">
-     AB.plot('<!-- TMPL_VAR benchmark -->');
+    <div id="<!-- TMPL_VAR id -->" style="height:300px;width:700px; "></div>
+    <script type="text/javascript" defer="defer">
+     AB.plot($('#<!-- TMPL_VAR id -->'), '<!-- TMPL_VAR benchmark -->');
     </script>
   <!-- /TMPL_LOOP -->
 </body>

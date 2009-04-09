@@ -3,3 +3,4 @@
 *.fasl
 *.olisp
 *.dx64fsl
+*.lx64fsl
