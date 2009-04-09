@@ -7,6 +7,8 @@
            #:import-release-from-dir
            ;; implementations
            #:sbcl #:sbcl-32 #:sbcl-64 #:cmucl #:cmucl-snapshot #:clisp
-           #:load-init-file))
+           #:load-init-file
+           #:with-db-connection
+           #:*base-dir*))
 
 ;;; arch-tag: "2523ee5c-ff5f-11d8-8b1b-000c76244c24"
