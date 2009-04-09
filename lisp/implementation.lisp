@@ -161,13 +161,12 @@ After control leaves BODY, chdirs back to the old value of *d-p-d*."
 					     year month date hour minute second step-name))
 			      *log-directory*)))
 	(ensure-directories-exist output-pathname)
-	(let ((proc (sb-ext:run-program program args
-					:input nil
-					:environment environment
-					:output output-pathname
-                                        :if-output-exists :supersede
-                                        )
-                    (error "Running programs is not implemented!")))
+	(let ((proc #+sbcl(sb-ext:run-program program args
+                                              :input nil
+                                              :environment environment
+                                              :output output-pathname
+                                              :if-output-exists :supersede)
+                    #-sbcl(error "Running programs is not implemented!")))
 	  (sb-ext:process-wait proc)
 	  (cond
             ((not (zerop (sb-ext:process-exit-code proc)))

@@ -1,2 +1,2 @@
 (cl:defpackage :autobench-ht
-  (:use :cl :hunchentoot :autobench :postmodern))
+  (:use :cl :hunchentoot :html-template :autobench :postmodern))
