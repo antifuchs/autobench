@@ -67,14 +67,14 @@
       (sql (:and (:= 'implementation-name implementation-name)
                  (:= 'belongs-to-release only-release)))))
 
-(defun implementation-run-times (implementation-name mode host benchmark
+(defun implementation-run-times (implementation-name mode host
                                  only-release)
   (with-db-connection ()
-    (let ((result-times ())
-          (result-versions ())
-          (result-errors ()))
+    (let ((result-times (make-hash-table :test 'equal))
+          (result-versions (make-hash-table :test 'equal))
+          (result-errors (make-hash-table :test 'equal)))
       (doquery (:order-by
-                (:select 'release-date 'version-number
+                (:select 'benchmark-name 'release-date 'version-number
                          (:as (:avg 'seconds) 'seconds)
                          (:as (:/ (:stddev 'seconds) (:count 'seconds)) 'error)
                          :from 'results :natural :inner-join 'versions
@@ -82,35 +82,32 @@
                                           implementation-name)
                                       (:= 'machine-name host)
                                       (:= 'mode mode)
-                                      (:= 'benchmark-name benchmark)
                                       (:raw
                                        (release-condition implementation-name
                                                           only-release)))
-                         :group-by 'release-date 'version-number)
-                'release-date)
-               (release-date version-number seconds error)
-               (push (list (ut-to-flot-timestamp release-date)
-                           seconds)
-                     result-times)
-               (push (list (ut-to-flot-timestamp release-date)
-                           (+ seconds error) (- seconds error))
-                     result-errors)
-               (setf result-versions
-                     (nconc
-                      (list (ut-to-flot-timestamp release-date)
-                            (list version-number implementation-name))
-                      result-versions)))
-      (st-json:write-json-to-string (list (nreverse result-times)
-                                          (nreverse result-errors)
-                                          (apply #'st-json:jso
-                                                 result-versions))))))
+                         :group-by 'benchmark-name 'release-date
+                         'version-number)
+                (:desc 'release-date))
+               (benchmark release-date version-number seconds error)
+               (push (list (ut-to-flot-timestamp release-date) seconds)
+                     (gethash benchmark result-times ()))
+               (push (list (ut-to-flot-timestamp release-date) error)
+                     (gethash benchmark result-errors ()))
+               (unless (gethash (ut-to-flot-timestamp release-date)
+                                result-versions)
+                 (setf (gethash (ut-to-flot-timestamp release-date)
+                                result-versions)
+                       version-number)))
+      (st-json:write-json-to-string (list result-times
+                                          result-errors
+                                          result-versions)))))
 
 ;;; handlers for actions:
 
 (define-easy-handler (json-for-one-bm :uri "/bench/json/data")
-    (implementation mode host benchmark release)
+    (implementation mode host release)
   (setf (hunchentoot:content-type*) "text/javascript")
-  (implementation-run-times implementation mode host benchmark release))
+  (implementation-run-times implementation mode host release))
 
 (define-easy-handler (index :uri "/bench/index") ()
   (with-db-connection ()
