@@ -98,3 +98,27 @@
                                   '(:ARCH :EMULATED-X86)')")
   (run-query "update implementations set show=false 
                where machine_name <> 'baker'"))
+
+(defmigration 1-add-commit-hash
+  "Add the commit SHA1 for versions that we know"
+  (run-query "alter table versions add version_code varchar(90)")
+      (format t "whoa~%")
+    
+  (with-current-directory (getf (rest (find 'sbcl *implementations-to-build*
+                                            :key #'first))
+                                :directory)
+    (with-input-from-program (s-sha1 *git-binary* "log"
+                                     "--reverse" "--pretty=format:%H"
+                                     "version.lisp-expr")
+      (loop for sha1 = (read-line s-sha1 nil nil)
+            while sha1
+            do (with-input-from-program (s-version (script "show-sbcl-version")
+                                                   sha1)
+                 (let ((version (eval (read s-version))))
+                   (format t "Updating version ~A=>~A~%" version sha1)
+                   (run-query
+                    (:update 'versions
+                             :set 'version-code sha1
+                             :where (:and
+                                     (:= 'version-number version)
+                                     (:is-null 'version-code))))))))))

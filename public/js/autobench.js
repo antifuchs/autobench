@@ -22,7 +22,11 @@ AB.mouse = (function() {
   }
   
   function getVersion(seriesIndex, time) {
-    return AB.plot.versions[AB.plot.version_by_series[seriesIndex]][time];
+    return AB.plot.versions[AB.plot.version_by_series[seriesIndex]][time][0];
+  }
+  
+  function getSha1(seriesIndex, time) {
+    return AB.plot.versions[AB.plot.version_by_series[seriesIndex]][time][1];
   }
   
   function getStdError(seriesIndex, event, time) {
@@ -42,6 +46,12 @@ AB.mouse = (function() {
     clickedItem: null,
     hoveredItem: null,
     
+    clear: function(){
+      $(".tooltip").remove();
+      AB.mouse.clickedItem = null;
+      AB.mouse.hoveredItem = null;
+    },
+    
     hover: function (event, pos, item) {
       if(item && !AB.mouse.clickedItem) {
         if (item.datapoint != AB.mouse.hoveredItem) {
@@ -53,7 +63,7 @@ AB.mouse = (function() {
             getImplName(item.seriesIndex) + " " +
             getVersion(item.seriesIndex, item.datapoint[0]) + ": " + 
             formatTimeString(item.datapoint[1], stdError)+ '<br/>'+
-            'click for more detail');
+            '<em>(click for details)</em>');
         }
       } else {
         AB.mouse.hoveredItem = null;
@@ -65,7 +75,20 @@ AB.mouse = (function() {
       if(item && item.datapoint != AB.mouse.clickedItem) {
         $(".tooltip").remove();
         AB.mouse.clickedItem = item.datapoint;
-        //showTooltip(item.pageX, item.pageY, 'clicktip', "wheeee");
+        
+        var stdError = getStdError(item.seriesIndex, event, item.datapoint[0]);
+        var gitlink = "", zoomlink = "";
+        var sha1 = getSha1(item.seriesIndex, item.datapoint[0]);
+        if (sha1) {
+          gitlink = '<a onclick="window.open(this.href); return false;" href="http://git.boinkor.net/gitweb/sbcl.git?a=commit;h='+sha1+'">[git]</a> ';
+        }
+        if (!AB.plot.zoomed) {
+          zoomlink = '<a title="zoom in on this revision" href="javascript:AB.plot.zoomIn(\''+item.seriesIndex+'\', \''+getVersion(item.seriesIndex, item.datapoint[0])+'\')">Zoom</a> ';
+        }        
+        showTooltip(item.pageX, item.pageY, 'clicktip', 
+          "<h4>"+getImplName(item.seriesIndex) + ' ' + getVersion(item.seriesIndex, item.datapoint[0]) + "</h4>"+
+          "<p>"+formatTimeString(item.datapoint[1], stdError)+"</p>" + 
+          '<p class="links">' + zoomlink + gitlink +"</p>");
       } else {
         AB.mouse.clickedItem = null;
         $('.tooltip').remove();
@@ -73,7 +96,7 @@ AB.mouse = (function() {
     },
     
     initListener: function(elt) {
-//      elt.bind('plotclick', AB.mouse.click);
+      elt.bind('plotclick', AB.mouse.click);
       elt.bind('plothover', AB.mouse.hover);
     }
   };
@@ -85,6 +108,8 @@ AB.plot = (function(){
   };
   
   return {
+    zoomed: false,
+    
     // [benchmark] -> element containing the graph of that benchmark
     benchmark_element: {},
     
@@ -109,16 +134,53 @@ AB.plot = (function(){
     // number of data sets to fetch before we can draw:
     todo: 0,
     
+    waitbox: function(status) {
+      $.modaldialog.success(status, {title: "This is going to take a little while", showClose: false, timeout: -1});
+    },
+    
     init: function() {
+      AB.plot.waitbox('Fetching data...');
       $("input.impl[checked]").each(function(i, elt){
         AB.plot.fetch(destructureImplSpec(elt.id));
       });
+    },
+    
+    zoomIn: function(series, release) {
+      if (AB.plot.zoomed)
+        return false;
+        
+      AB.mouse.clear();
+      var implspec = AB.plot.version_by_series[series];
+      AB.plot.zoomed = {errors: AB.plot.errors,
+                        versions: AB.plot.versions,
+                        dataset: AB.plot.dataset};
+      AB.plot.errors = {}; AB.plot.versions = {}; AB.plot.dataset = {};
+      AB.plot.waitbox('Zooming in on release ' + release + '...');
+      $('#impl-selector').hide();
+      $('a#zoom-out').show();
+      AB.plot.fetch(implspec, release);
+    },
+    
+    zoomOut: function() {
+      if (!AB.plot.zoomed)
+        return false;
+      
+      AB.mouse.clear();
+      $.each(AB.plot.zoomed, function(key, val){
+        AB.plot[key] = AB.plot.zoomed[key];
+      });
+      $('#impl-selector').show();
+      $('a#zoom-out').hide();
+      AB.plot.zoomed = false;
+      AB.plot.waitbox('Zooming out...');
+      AB.plot.draw();
     },
     
     selectionChanged: function() {
       // this refers to the checkbox.
       var implspec = destructureImplSpec(this.id);
       if (this.checked) {
+        AB.plot.waitbox('Fetching data...');
         // just got selected. Fetch the data and plot it
         AB.plot.fetch(implspec);
       } else {
@@ -129,14 +191,16 @@ AB.plot = (function(){
       }
     },
     
-    fetch: function(implspec) {
+    fetch: function(implspec, release) {
       implspec = $.isArray(implspec) ? implspec : destructureImplSpec(implspec);
       var impl=implspec[0], mode=implspec[1], machine=implspec[2];
       AB.plot.todo++;
-      $.getJSON('/bench/json/data',
-                {implementation: impl,
-                 mode: mode,
-                 host: machine},
+      var data = {implementation: impl,
+                  mode: mode,
+                  host: machine};
+      if (release)
+        data.release = release;
+      $.getJSON('/bench/json/data', data,
                 function(retrieved_data, status) {
                   var result_data = [{}, {}];
                   if (status == 'success') {
@@ -197,6 +261,7 @@ AB.plot = (function(){
         $.plot(elt, data, 
                { xaxis: { mode: "time" },
                   grid: { hoverable: true, clickable: true }})
+        $('#dialog').remove();
       });
     },
   };

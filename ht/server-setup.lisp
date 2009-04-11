@@ -134,6 +134,7 @@
           (result-versions (make-hash-table :test 'equal)))
       (doquery (:order-by
                 (:select 'benchmark-name 'release-date 'version-number
+                         'version-code
                          (:as (:avg 'seconds) 'seconds)
                          (:as (:/ (:stddev 'seconds) (:count 'seconds))
                               'error)
@@ -147,16 +148,18 @@
                                         implementation-name
                                         only-release)))
                          :group-by 'benchmark-name 'release-date
-                         'version-number)
+                         'version-number 'version-code)
                 (:desc 'release-date))
-          (benchmark release-date version-number seconds error)
+          (benchmark release-date version-number version-code seconds error)
         (push (list (ut-to-flot-timestamp release-date) seconds error)
               (gethash benchmark result-times ()))
         (unless (gethash (ut-to-flot-timestamp release-date)
                          result-versions)
           (setf (gethash (ut-to-flot-timestamp release-date)
                          result-versions)
-                version-number)))
+                `(,version-number
+                  ,@(when version-code
+                      (list version-code))))))
       (st-json:write-json-to-string
        (st-json:jso "timings" result-times
                     "versions" result-versions)))))
