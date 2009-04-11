@@ -13,6 +13,25 @@
 	<!--[if IE]><script language="javascript" type="text/javascript" src="/js/excanvas.min.js"></script><![endif]-->
 </head>
 <body>
+  <div id="impl-selector">
+    <form id="impl-selector-form">
+    <!-- tmpl_loop implementations -->
+      <p>
+        <input class="impl" type="checkbox" id="<!-- tmpl_var implspec -->"
+               name="<!-- tmpl_var implspec -->"
+               autocomplete="off"
+               <!-- tmpl_if selected -->
+                 checked="checked"
+               <!-- /tmpl_if -->>
+        <label for="<!-- tmpl_var implspec -->"
+        ><!-- tmpl_var pretty-name --></label>
+     </p>
+    <!-- /tmpl_loop -->
+    </form>
+    <script type="text/javascript">
+      $("input.impl").change(AB.plot.selectionChanged);
+    </script>
+  </div>
   <!-- TMPL_LOOP benchmarks -->
   <div class="graph">
     <div class="graph-title">
@@ -31,9 +50,7 @@
   </div>
   <!-- /TMPL_LOOP -->
 <script type="text/javascript" defer="defer">
-  AB.plot.fetch('SBCL', '(:ARCH :X86_64 :FEATURES NIL)', 'baker');
-  AB.plot.fetch('SBCL', '(:ARCH :EMULATED-X86 :FEATURES NIL)', 'baker');
-  AB.plot.fetch('CMUCL', '(:ARCH :EMULATED-X86)', 'baker');
+  AB.plot.init();
 </script>
 </body>
 </html>

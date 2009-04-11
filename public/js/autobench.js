@@ -28,13 +28,14 @@ AB.mouse = (function() {
   function getStdError(seriesIndex, event, time) {
     var impl = AB.plot.version_by_series[seriesIndex];
     var bm = AB.plot.element_benchmark[event.currentTarget.id];
-    var err = AB.plot.errors[impl][bm][time][1];
+    var err = AB.plot.errors[impl][bm][time];
     return err;
   }
   
   function getImplName(seriesIndex){
-    var implspec = AB.plot.version_by_series[seriesIndex].split(',');
-    return implspec[0] + " " + implspec[1];
+    var implspec = AB.plot.version_by_series[seriesIndex];
+    var prettyName = $("input[name="+implspec+"] ~ label").text();
+    return prettyName;
   }
   
   return {
@@ -79,13 +80,9 @@ AB.mouse = (function() {
 })();
 
 AB.plot = (function(){
-  function toDictionary(array){
-    var ret = {};
-    $.each(array, function(i, elt){
-      ret[elt[0]] = elt;
-    });
-    return ret;
-  }
+  function destructureImplSpec(string){
+    return string.split(',');
+  };
   
   return {
     // [benchmark] -> element containing the graph of that benchmark
@@ -112,35 +109,67 @@ AB.plot = (function(){
     // number of data sets to fetch before we can draw:
     todo: 0,
     
-    fetch: function(impl, mode, machine) {
+    init: function() {
+      $("input.impl[checked]").each(function(i, elt){
+        AB.plot.fetch(destructureImplSpec(elt.id));
+      });
+    },
+    
+    selectionChanged: function() {
+      // this refers to the checkbox.
+      var implspec = destructureImplSpec(this.id);
+      if (this.checked) {
+        // just got selected. Fetch the data and plot it
+        AB.plot.fetch(implspec);
+      } else {
+        delete AB.plot.errors[this.id];
+        delete AB.plot.versions[this.id];
+        delete AB.plot.dataset[this.id];
+        AB.plot.draw();
+      }
+    },
+    
+    fetch: function(implspec) {
+      implspec = $.isArray(implspec) ? implspec : destructureImplSpec(implspec);
+      var impl=implspec[0], mode=implspec[1], machine=implspec[2];
       AB.plot.todo++;
       $.getJSON('/bench/json/data',
                 {implementation: impl,
                  mode: mode,
                  host: machine},
                 function(retrieved_data, status) {
+                  var result_data = [{}, {}];
                   if (status == 'success') {
                     // massage the data we retrieved:
-                    var times = retrieved_data[0], stderrs = retrieved_data[1], versions = retrieved_data[2];
+                    var times = retrieved_data.timings, versions = retrieved_data.versions;
                     
                     AB.plot.errors[[impl, mode, machine]] = {};
                     AB.plot.versions[[impl, mode, machine]] = {};
                     
-                    $.each(times, function(benchmark, timings){
+                    $.each(times, function(benchmark, timings){                      
                       if (AB.plot.benchmarks[benchmark])
-                        AB.plot.benchmarks[benchmark]++
+                        AB.plot.benchmarks[benchmark]++;
                       else
                         AB.plot.benchmarks[benchmark] = 1;
-                      AB.plot.errors[[impl, mode, machine]][benchmark] = toDictionary(stderrs[benchmark]);
+
+                      var resultErrors = [];
+                      var resultTimes = [];    
+                      AB.plot.errors[[impl, mode, machine]][benchmark] = {};                  
+                      var i = 0;
+                      $.each(timings, function(i, timeAndError){
+                        resultTimes[i] = [timeAndError[0], timeAndError[1]];
+                        resultErrors[i] = [timeAndError[0], 
+                                           timeAndError[1]+timeAndError[2], 
+                                           timeAndError[1]-timeAndError[2]];
+                        AB.plot.errors[[impl, mode, machine]][benchmark][timeAndError[0]] = timeAndError[2];
+                      });
                       AB.plot.versions[[impl, mode, machine]] = versions;
-                      retrieved_data[1][benchmark] = $.map(stderrs[benchmark],
-                                                           function(err, n) {
-                                                             return [[err[0], timings[n][1]+err[1],timings[n][1]-err[1]]];
-                                                           });
+                      result_data[0][benchmark] = resultTimes;
+                      result_data[1][benchmark] = resultErrors;
                     });
                                         
                     // now store it, and draw it if this was the last outstanding request:
-                    AB.plot.dataset[[impl, mode, machine]] = retrieved_data;
+                    AB.plot.dataset[[impl, mode, machine]] = result_data;
                   }
                   AB.plot.todo--;
                   if (AB.plot.todo == 0){
@@ -150,6 +179,7 @@ AB.plot = (function(){
     },
     
     draw: function(){
+      AB.plot.version_by_series = {};
       $.each(AB.plot.benchmarks, function(benchmark, impls) {
         var elt = AB.plot.benchmark_element[benchmark];
         var data = [];

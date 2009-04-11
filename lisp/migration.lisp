@@ -39,17 +39,16 @@
 ;;;; Migrations for boinkmarks:
 
 (defmigration 0-use-surrogate-keys
-    "Use surrogate keys for builds: should speed up accesses to results."
+  "Use surrogate keys for builds: should speed up accesses to results."
   (run-query "cluster version using version_release_date_idx")
   (run-query "alter table version add version_id serial")
 
   ;; recreate tables with good names:
   (run-query "create table benchmarks as select name as benchmark_name, unit as unit from benchmark")
   (run-query "create table machines as select name as machine_name, type as machine_type from machine")
-  (run-query "create table implementations as select name as implementation_name from impl")
   (run-query "create table versions as 
                select version_id, i_name as implementation_name, version as version_number, is_release, 
-                      from_universal_time(release_date) as release_date, belongs_to_release
+                      release_date as release_date, belongs_to_release
                  from version")
   (run-query "create table builds as 
                select version_id, mode
@@ -58,29 +57,44 @@
                select version_id, mode, m_name as machine_name, b_name as benchmark_name, 
                       from_universal_time(date) as result_date, seconds
                  from result join version on v_name=i_name and v_version=version")
-
+  (run-query "create table implementations as 
+               select v_name as implementation_name, mode, m_name as machine_name, true as show, false as show_by_default
+                 from result
+                group by v_name, mode, m_name
+                order by v_name, mode, m_name")
+    
   ;; Create indexes/PK constraints now:  
   (run-query "alter table builds add primary key (version_id, mode)")
   (run-query "alter table versions add primary key (version_id)")
   (run-query "create unique index version_uniqueness_idx on versions(implementation_name, version_number)")
   (run-query "alter table results add primary key (version_id, mode, result_date, benchmark_name)")
-  (run-query "alter table implementations add primary key (implementation_name)")
+  (run-query "alter table implementations add primary key (implementation_name, mode, machine_name)")
   (run-query "alter table benchmarks add primary key (benchmark_name)")
   (run-query "alter table machines add primary key (machine_name)")
 
   ;; FK constraints, and we're done:
-  (run-query "alter table versions add constraint versions_implementations_fk foreign key (implementation_name)
-                    references implementations(implementation_name)")
+  (run-query "alter table implementations add constraint implementations_machine_fk foreign key (machine_name)
+                    references machines(machine_name) on delete cascade deferrable initially deferred")
   (run-query "alter table versions alter implementation_name set not null, alter version_number set not null")
   (run-query "alter table builds add constraint builds_versions_fk foreign key (version_id)
-                    references versions(version_id)")
+                    references versions(version_id) on delete cascade deferrable initially deferred")
   (run-query "alter table results add constraint results_builds_fk foreign key (version_id, mode)
-                    references builds(version_id, mode)")
+                    references builds(version_id, mode) on delete cascade deferrable initially deferred")
   (run-query "alter table results add constraint results_benchmarks_fk foreign key (benchmark_name)
-                    references benchmarks(benchmark_name)")
+                    references benchmarks(benchmark_name) deferrable initially deferred")
   (run-query "alter table results add constraint results_machines_fk foreign key (machine_name)
-                    references machines(machine_name)")
+                    references machines(machine_name) deferrable initially deferred")
   (run-query "alter table results alter seconds set not null, alter machine_name set not null")
-    
+  
+  
   ;; Now drop the irrelevant tables 
-  (run-query "drop table machine, impl, benchmark, build, result, version, impl_support, machine_support cascade"))
+  (run-query "drop table machine, impl, benchmark, build, result, version, impl_support, machine_support cascade")
+
+  ;; Set default-on impls
+  (run-query "update implementations set show_by_default=true 
+               where machine_name='baker' 
+                     and implementation_name <> 'CLISP'
+                     and mode IN ('(:ARCH :EMULATED-X86 :FEATURES NIL)', '(:ARCH :X86_64 :FEATURES NIL)', 
+                                  '(:ARCH :EMULATED-X86)')")
+  (run-query "update implementations set show=false 
+               where machine_name <> 'baker'"))
