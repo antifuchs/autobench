@@ -182,6 +182,11 @@ After control leaves BODY, chdirs back to the old value of *d-p-d*."
 (defun invoke-logged-program (step-name program args &key environment)
   (error "Failed at ~A: invoke-logged-program is unimplemented." step-name))
 
+(defun script (name)
+  (namestring (merge-pathnames (make-pathname :name name
+                                              :directory '(:relative "scripts"))
+                               *base-dir*)))
+
 #+sbcl
 (defmacro with-input-from-program ((stream program &rest args) &body body)
   (with-gensyms (proc arg-list)
