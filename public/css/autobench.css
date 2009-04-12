@@ -1,13 +1,8 @@
-#hovertip {
-    position: absolute;
-    display: none;
-    border: 1px solid #fdd;
-    padding: 2px;
-    background-color: #fee;
-    opacity: 0.80;
+h1, h2, h3, h4 {
+  font-family: 'Trebuchet MS',Verdana,sans-serif;
 }
 
-#clicktip {
+#hovertip {
     position: absolute;
     display: none;
     border: 1px solid #fdd;
@@ -18,4 +13,147 @@
 
 .hidden {
   display: none;
+}
+
+/* clicktips: */
+
+#clicktip {
+    position: absolute;
+    display: none;
+    border: 1px solid #fdd;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    background-color: #fee;
+    opacity: 0.80;
+}
+
+#clicktip h4 {
+  margin-top: 0px;
+  margin-bottom: 0.3em;
+  border-bottom: 1px solid black;
+}
+
+#clicktip h4 span.impl {
+  margin-right:0.8em;
+}
+
+#clicktip h4 span.version {
+}
+
+#clicktip ul.links{
+  padding-left: 0px;
+  width: 100%;
+  border-top: 1px solid black;
+}
+
+#clicktip ul.links li {
+  float:right;
+  list-style-image:none;
+  list-style-position:outside;
+  list-style-type:none;
+  margin-right:0.3em;
+}
+
+
+/* Sidebar+content: */
+
+a {
+  color: #483D8B;
+}
+
+div#sidebar {
+  background-color: #ffffff;
+  position: fixed;
+  top: 0;
+  right: 0px;
+  bottom: 0;
+}
+
+div#sidebar div.box {
+  -moz-background-clip:border;
+  -moz-background-inline-policy:continuous;
+  -moz-background-origin:padding;
+  -moz-border-radius-topleft:0.5em;
+  -webkit-border-top-left-radius: 0.5em 0.5em;
+  margin: 0.01em;
+  background-color: #E8E8E8;
+  width: 100%;
+  margin-right: 8px;
+}
+
+div#sidebar div.box h3 {
+  margin-top: 5px;
+  padding-left: 13px;
+}
+
+div#impl-selector {
+}
+
+form#impl-selector-form p {
+  margin: 0px;
+}
+
+div#hidden-benchmarks-box {
+  position: absolute;
+  height: 60%;
+  padding-left: 0px;
+  bottom: 0;
+  overflow-y: auto;
+}
+
+ul#hidden-benchmarks {
+  padding-left: 20px;
+  overflow-y: auto;
+}
+
+ul#hidden-benchmarks li {
+  list-style-image:none;
+  list-style-position:outside;
+  list-style-type:none;
+}
+
+div#zoom-box {
+}
+
+div#graphs {
+  
+}
+
+/* zoom button visibility */
+
+body.zoomed div#zoom-box {
+  display: block;
+}
+
+body div#zoom-box {
+  display: none;
+}
+
+/* Graphs */
+
+div#graphs {
+  width: 700px;
+}
+
+div.graph-canvas-container {
+  height: 300px;
+  width: 700px;
+}
+
+div.graph-title {
+}
+
+div.graph-title h3 {
+  margin-top: 19px;
+  margin-bottom: 0px;
+}
+
+div.graph-buttons div {
+  margin-top: -19px;
+  margin-right: 6px;
+  float: right;
+}
+
+div.graph-buttons a {
+  text-decoration: none;
 }
