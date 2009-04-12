@@ -25,8 +25,12 @@ AB.mouse = (function() {
     return AB.plot.versions[AB.plot.version_by_series[seriesIndex]][time][0];
   }
   
-  function getSha1(seriesIndex, time) {
+  function canZoom(seriesIndex, time) {
     return AB.plot.versions[AB.plot.version_by_series[seriesIndex]][time][1];
+  }
+  
+  function getSha1(seriesIndex, time) {
+    return AB.plot.versions[AB.plot.version_by_series[seriesIndex]][time][2];
   }
   
   function getStdError(seriesIndex, event, time) {
@@ -82,7 +86,7 @@ AB.mouse = (function() {
         if (sha1) {
           gitlink = '<li><a onclick="window.open(this.href); return false;" href="http://git.boinkor.net/gitweb/sbcl.git?a=commit;h='+sha1+'">commit</a></li>';
         }
-        if (!AB.plot.zoomed) {
+        if (!AB.plot.zoomed && canZoom(item.seriesIndex, item.datapoint[0])) {
           zoomlink = '<li><a title="show minor revisions after this release" href="javascript:AB.plot.zoomIn(\''+item.seriesIndex+'\', \''+getVersion(item.seriesIndex, item.datapoint[0])+'\')">zoom</a></li>';
         }        
         showTooltip(item.pageX, item.pageY, 'clicktip', 
