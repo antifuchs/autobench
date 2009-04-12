@@ -98,7 +98,9 @@
                      and mode IN ('(:ARCH :EMULATED-X86 :FEATURES NIL)', '(:ARCH :X86_64 :FEATURES NIL)', 
                                   '(:ARCH :EMULATED-X86)')")
   (run-query "update implementations set show=false 
-               where machine_name <> 'baker'"))
+               where machine_name <> 'baker'")
+  (run-query "update versions set is_release=false
+               where implementation_name='CMUCL' and belongs_to_release='19c' and version_number<>'19c'"))
 
 (defmigration 1-add-commit-hash
   "Add the commit SHA1 for versions that we know"
