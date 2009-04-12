@@ -242,27 +242,120 @@ AB.plot = (function(){
                 });
     },
     
+    drawOne: function(benchmark){
+      var elt = AB.plot.benchmark_element[benchmark];
+      var data = [];
+      var series_num = 1;
+      $.each(AB.plot.dataset, function(implspec, data_by_benchmark){
+        $.merge(data, [{data: data_by_benchmark[1][benchmark],
+                        bars: {show: true, barWidth: 1, shadowSize: 0},
+                        color: '#000000'},
+                       {data: data_by_benchmark[0][benchmark],
+                        lines: {show: true, shadowSize: 0, lineWidth: 1}, 
+                        points: {show: true, pointSize: 1, shadowSize: 0}}]);
+        AB.plot.version_by_series[series_num] = implspec;
+        series_num += 2;
+      });
+      $.plot(elt, data, 
+             { xaxis: { mode: "time" },
+                grid: { hoverable: true, clickable: true }})
+      $('#dialog').remove();      
+    },
+    
     draw: function(){
       AB.plot.version_by_series = {};
       $.each(AB.plot.benchmarks, function(benchmark, impls) {
-        var elt = AB.plot.benchmark_element[benchmark];
-        var data = [];
-        var series_num = 1;
-        $.each(AB.plot.dataset, function(implspec, data_by_benchmark){
-          $.merge(data, [{data: data_by_benchmark[1][benchmark],
-                          bars: {show: true, barWidth: 1, shadowSize: 0},
-                          color: '#000000'},
-                         {data: data_by_benchmark[0][benchmark],
-                          lines: {show: true, shadowSize: 0, lineWidth: 1}, 
-                          points: {show: true, pointSize: 1, shadowSize: 0}}]);
-          AB.plot.version_by_series[series_num] = implspec;
-          series_num += 2;
-        });
-        $.plot(elt, data, 
-               { xaxis: { mode: "time" },
-                  grid: { hoverable: true, clickable: true }})
-        $('#dialog').remove();
+        if (!AB.userPrefs.benchmarkHidden($('div[id='+benchmark+']')))
+          AB.plot.drawOne(benchmark);
       });
     },
+  };
+})();
+
+AB.userPrefs = (function(){
+  var initialized = false;
+  
+  return {
+    hiddenBenchmarks: [],
+    
+    init: function() {
+      if(initialized) return;
+      $.jStore.ready(function(ev, engine){
+        engine.ready(function(ev, engine){
+          $('div.graph').each(function(i, div) {
+            if (AB.userPrefs.benchmarkHidden(div)) {
+              AB.userPrefs.removeFromDisplay(div, true);
+            }
+          });
+          AB.userPrefs.regenerateHiddenList();
+        });
+      });
+      initialized = true;
+    },
+        
+    removeFromDisplay: function(elt, delayRedisplay) {
+      var name = $(elt).attr('id');
+      $(elt).addClass('hidden');
+      if (!delayRedisplay)
+        AB.userPrefs.regenerateHiddenList();
+    },
+    
+    regenerateHiddenList: function(){
+      $('ul#hidden-benchmarks li').remove();
+      $('div.graph').each(function(i, div){
+        var name = div.id;
+        $('<li><a class="'+name+'" href="javascript:AB.userPrefs.showBenchmark($(\'div[id='+name+']\')); return false">'+name+'</a></li>').appendTo('ul#hidden-benchmarks');
+      });
+    },
+    
+    showAgain: function(elt) {
+      $(elt).removeClass('hidden');
+      $('ul#hidden-benchmarks li a[class='+$(elt).attr('id')+']').parent().remove();
+      AB.plot.drawOne($(elt).attr('id'));
+    },
+    
+    hideBenchmark: function(elt) {
+      var name = $(elt).attr('id');
+      var benchmarksHidden = $.evalJSON($.store('hideBenchmarks'));
+      if (!benchmarksHidden) {
+        benchmarksHidden = [];
+      }
+      $.merge(benchmarksHidden, [name]);
+      $.merge(AB.userPrefs.hiddenBenchmarks, [name]);
+      
+      $.store('hideBenchmarks', $.toJSON(benchmarksHidden));
+      AB.userPrefs.removeFromDisplay(elt);
+    },
+    
+    showBenchmark: function(elt) {
+      var name = $(elt).attr('id');
+      var benchmarksHidden = $.evalJSON($.store('hideBenchmarks'));
+      if (!benchmarksHidden) {
+        benchmarksHidden = [];
+      }
+      benchmarksHidden = $.map(benchmarksHidden, function(elt, i){
+        if(elt == name)
+          return [];
+        else
+          return [elt];
+      });
+      AB.userPrefs.hiddenBenchmarks = $.map(benchmarksHidden, function(elt, i){
+        if(elt == name)
+          return [];
+        else
+          return [elt];
+      });
+      $.store('hideBenchmarks', $.toJSON(benchmarksHidden));
+      AB.userPrefs.showAgain(elt);
+    },
+    
+    benchmarkHidden: function(elt) {
+      var name = $(elt).attr('id');
+      var benchmarksHidden = $.evalJSON($.store('hideBenchmarks'));
+      if (!benchmarksHidden) {
+        return $.inArray(name, AB.userPrefs.hiddenBenchmarks) >= 0;
+      }
+      return $.inArray(name, benchmarksHidden) >= 0;
+    }
   };
 })();
