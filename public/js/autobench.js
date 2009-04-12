@@ -179,6 +179,7 @@ AB.plot = (function(){
     selectionChanged: function() {
       // this refers to the checkbox.
       var implspec = destructureImplSpec(this.id);
+      AB.userPrefs.setImplementationActive(implspec, this.checked);
       if (this.checked) {
         AB.plot.waitbox('Fetching data...');
         // just got selected. Fetch the data and plot it
@@ -282,6 +283,18 @@ AB.userPrefs = (function(){
       if(initialized) return;
       $.jStore.ready(function(ev, engine){
         engine.ready(function(ev, engine){
+          // restore implementation selection if we have any selected:
+          if ($.store('activatedImplementations')) {
+            $('input.impl').each(function(i, input){
+              input.checked = AB.userPrefs.implementationActive(input.name);
+            });
+          } else {
+            $('input.impl').each(function(i, input){
+              AB.userPrefs.setImplementationActive(input.name, input.checked);
+            });
+          }
+          
+          // restore viewed benchmarks:
           $('div.graph').each(function(i, div) {
             if (AB.userPrefs.benchmarkHidden(div)) {
               AB.userPrefs.removeFromDisplay(div, true);
@@ -356,6 +369,21 @@ AB.userPrefs = (function(){
         return $.inArray(name, AB.userPrefs.hiddenBenchmarks) >= 0;
       }
       return $.inArray(name, benchmarksHidden) >= 0;
+    },
+    
+    implementationActive: function(spec){
+      return $.evalJSON($.store('activatedImplementations'))[spec];
+    },
+    
+    setImplementationActive: function(spec, value){
+      var active = $.evalJSON($.store('activatedImplementations'));
+      if (!active) active = {};
+      if (value) {
+        active[spec] = true;
+      } else {
+        delete active[spec];
+      }
+      $.store('activatedImplementations', $.toJSON(active));
     }
   };
 })();
