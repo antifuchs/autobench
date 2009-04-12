@@ -80,15 +80,15 @@ AB.mouse = (function() {
         var gitlink = "", zoomlink = "";
         var sha1 = getSha1(item.seriesIndex, item.datapoint[0]);
         if (sha1) {
-          gitlink = '<a onclick="window.open(this.href); return false;" href="http://git.boinkor.net/gitweb/sbcl.git?a=commit;h='+sha1+'">[git]</a> ';
+          gitlink = '<li><a onclick="window.open(this.href); return false;" href="http://git.boinkor.net/gitweb/sbcl.git?a=commit;h='+sha1+'">commit</a></li>';
         }
         if (!AB.plot.zoomed) {
-          zoomlink = '<a title="zoom in on this revision" href="javascript:AB.plot.zoomIn(\''+item.seriesIndex+'\', \''+getVersion(item.seriesIndex, item.datapoint[0])+'\')">Zoom</a> ';
+          zoomlink = '<li><a title="show minor revisions after this release" href="javascript:AB.plot.zoomIn(\''+item.seriesIndex+'\', \''+getVersion(item.seriesIndex, item.datapoint[0])+'\')">zoom</a></li>';
         }        
         showTooltip(item.pageX, item.pageY, 'clicktip', 
-          "<h4>"+getImplName(item.seriesIndex) + ' ' + getVersion(item.seriesIndex, item.datapoint[0]) + "</h4>"+
-          "<p>"+formatTimeString(item.datapoint[1], stdError)+"</p>" + 
-          '<p class="links">' + zoomlink + gitlink +"</p>");
+          '<h4><span class="impl">'+getImplName(item.seriesIndex) + '</span><span class="version">' + getVersion(item.seriesIndex, item.datapoint[0]) + "</span></h4>"+
+          "<div><p>"+formatTimeString(item.datapoint[1], stdError)+"</p>" + 
+          '<ul class="links">' + zoomlink + gitlink +"</ul></div>");
       } else {
         AB.mouse.clickedItem = null;
         $('.tooltip').remove();
@@ -140,8 +140,10 @@ AB.plot = (function(){
     
     init: function() {
       AB.plot.waitbox('Fetching data...');
-      $("input.impl[checked]").each(function(i, elt){
-        AB.plot.fetch(destructureImplSpec(elt.id));
+      $("input.impl").each(function(i, elt){
+        if (elt.checked){
+          AB.plot.fetch(destructureImplSpec(elt.id));
+        }
       });
     },
     
@@ -156,8 +158,9 @@ AB.plot = (function(){
                         dataset: AB.plot.dataset};
       AB.plot.errors = {}; AB.plot.versions = {}; AB.plot.dataset = {};
       AB.plot.waitbox('Zooming in on release ' + release + '...');
+      $('#zoom-release-spec').text(release);
       $('#impl-selector').hide();
-      $('a#zoom-out').show();
+      $('body').addClass('zoomed');
       AB.plot.fetch(implspec, release);
     },
     
@@ -170,7 +173,7 @@ AB.plot = (function(){
         AB.plot[key] = AB.plot.zoomed[key];
       });
       $('#impl-selector').show();
-      $('a#zoom-out').hide();
+      $('body').removeClass('zoomed');
       AB.plot.zoomed = false;
       AB.plot.waitbox('Zooming out...');
       AB.plot.draw();
@@ -277,35 +280,36 @@ AB.userPrefs = (function(){
   var initialized = false;
   
   return {
-    hiddenBenchmarks: [],
-    
     init: function() {
       if(initialized) return;
-      $.jStore.ready(function(ev, engine){
-        engine.ready(function(ev, engine){
-          // restore implementation selection if we have any selected:
-          if ($.store('activatedImplementations')) {
-            $('input.impl').each(function(i, input){
-              input.checked = AB.userPrefs.implementationActive(input.name);
-            });
-          } else {
-            $('input.impl').each(function(i, input){
-              AB.userPrefs.setImplementationActive(input.name, input.checked);
-            });
-          }
-          
-          // restore viewed benchmarks:
-          $('div.graph').each(function(i, div) {
-            if (AB.userPrefs.benchmarkHidden(div)) {
-              AB.userPrefs.removeFromDisplay(div, true);
-            }
-          });
-          AB.userPrefs.regenerateHiddenList();
+      
+      // restore implementation selection if we have any selected:
+      if ($.cookies.get('haveDefaults')) {
+        $('input.impl').each(function(i, input){
+          input.checked = AB.userPrefs.implementationActive(input.name);
         });
+      } else {
+        $.cookies.set('haveDefaults', 'yes', {hoursToLive: 8544});
+        if (!$.cookies.test())
+          alert("You have cookie paranoia settings that will negatively affect your user experience on this site.\nProceed with caution.");
+        $('input.impl').each(function(i, input){
+          AB.userPrefs.setImplementationActive(input.name, input.checked);
+        });
+      }
+      
+      // hide previously hidden benchmarks:
+      var hidden = AB.userPrefs.hiddenBenchmarks();
+      $('div.graph').each(function(i, div) {
+        if (hidden[i] == '0') {
+          AB.userPrefs.removeFromDisplay(div, true);
+        }
       });
+      AB.userPrefs.regenerateHiddenList();    
       initialized = true;
     },
         
+    /// Benchmark visibility settings    
+    
     removeFromDisplay: function(elt, delayRedisplay) {
       var name = $(elt).attr('id');
       $(elt).addClass('hidden');
@@ -317,7 +321,8 @@ AB.userPrefs = (function(){
       $('ul#hidden-benchmarks li').remove();
       $('div.graph').each(function(i, div){
         var name = div.id;
-        $('<li><a class="'+name+'" href="javascript:AB.userPrefs.showBenchmark($(\'div[id='+name+']\')); return false">'+name+'</a></li>').appendTo('ul#hidden-benchmarks');
+        if (AB.userPrefs.benchmarkHidden(div))
+          $('<li><a class="'+name+'" href="javascript:AB.userPrefs.showBenchmark($(\'div[id='+name+']\'))">'+name+'</a></li>').appendTo('ul#hidden-benchmarks');
       });
     },
     
@@ -327,63 +332,48 @@ AB.userPrefs = (function(){
       AB.plot.drawOne($(elt).attr('id'));
     },
     
+    updateHideCookieValue: function(){
+      var cookieValue = '';
+      $.each($('div.graph'), function(i, elt){
+        cookieValue += ($(elt).hasClass('hidden') ? '0' : '1');
+      });
+      $.cookies.del('hide', {hoursToLive: 8544})
+      $.cookies.set('hide', cookieValue, {hoursToLive: 8544});
+    },
+    
     hideBenchmark: function(elt) {
-      var name = $(elt).attr('id');
-      var benchmarksHidden = $.evalJSON($.store('hideBenchmarks'));
-      if (!benchmarksHidden) {
-        benchmarksHidden = [];
-      }
-      $.merge(benchmarksHidden, [name]);
-      $.merge(AB.userPrefs.hiddenBenchmarks, [name]);
-      
-      $.store('hideBenchmarks', $.toJSON(benchmarksHidden));
       AB.userPrefs.removeFromDisplay(elt);
+      AB.userPrefs.updateHideCookieValue();
     },
     
     showBenchmark: function(elt) {
-      var name = $(elt).attr('id');
-      var benchmarksHidden = $.evalJSON($.store('hideBenchmarks'));
-      if (!benchmarksHidden) {
-        benchmarksHidden = [];
-      }
-      benchmarksHidden = $.map(benchmarksHidden, function(elt, i){
-        if(elt == name)
-          return [];
-        else
-          return [elt];
-      });
-      AB.userPrefs.hiddenBenchmarks = $.map(benchmarksHidden, function(elt, i){
-        if(elt == name)
-          return [];
-        else
-          return [elt];
-      });
-      $.store('hideBenchmarks', $.toJSON(benchmarksHidden));
       AB.userPrefs.showAgain(elt);
+      AB.userPrefs.updateHideCookieValue();
     },
     
     benchmarkHidden: function(elt) {
-      var name = $(elt).attr('id');
-      var benchmarksHidden = $.evalJSON($.store('hideBenchmarks'));
-      if (!benchmarksHidden) {
-        return $.inArray(name, AB.userPrefs.hiddenBenchmarks) >= 0;
-      }
-      return $.inArray(name, benchmarksHidden) >= 0;
+      return $(elt).hasClass('hidden');
     },
+    
+    hiddenBenchmarks: function() {
+      var val = $.cookies.get('hide');
+      if (!val)
+        val = '';
+      return val;
+    },
+    
+    /// Implementation checkbox settings
     
     implementationActive: function(spec){
-      return $.evalJSON($.store('activatedImplementations'))[spec];
+      return $.cookies.get('impl_'+spec) == 'active';
     },
     
-    setImplementationActive: function(spec, value){
-      var active = $.evalJSON($.store('activatedImplementations'));
-      if (!active) active = {};
+    setImplementationActive: function(spec, value){      
       if (value) {
-        active[spec] = true;
+        $.cookies.set('impl_'+spec, 'active', {hoursToLive: 8544});
       } else {
-        delete active[spec];
+        $.cookies.del('impl_'+spec);
       }
-      $.store('activatedImplementations', $.toJSON(active));
     }
   };
 })();

@@ -11,54 +11,70 @@
 	<script src="/js/jquery-1.3.2.min.js"></script>
 	<script language="javascript" type="text/javascript" src="/js/autobench.js"></script>
 	<script language="javascript" type="text/javascript" src="/js/jquery.modaldialog.js"></script>
-        <script language="javascript" type="text/javascript" src="/js/jquery.jstore-all-min.js" engine="html5"
-                project="autobench" identifier="main"></script>
+        <script language="javascript" type="text/javascript" src="/js/jquery.cookies.2.0.1.min.js"></script>
         <script language="javascript" type="text/javascript" src="/js/jquery.json-1.3.min.js"></script>
 	<script language="javascript" type="text/javascript" src="/js/jquery.flot.js"></script>
 	<!--[if IE]><script language="javascript" type="text/javascript" src="/js/excanvas.min.js"></script><![endif]-->
 </head>
 <body>
-  <div id="impl-selector">
-    <form id="impl-selector-form">
-    <!-- tmpl_loop implementations -->
-      <p>
-        <input class="impl" type="checkbox" id="<!-- tmpl_var implspec -->"
-               name="<!-- tmpl_var implspec -->"
-               autocomplete="off"
-               <!-- tmpl_if selected -->
-                 checked="checked"
-               <!-- /tmpl_if -->>
-        <label for="<!-- tmpl_var implspec -->"
-        ><!-- tmpl_var pretty-name --></label>
-     </p>
-    <!-- /tmpl_loop -->
-    </form>
-    <script type="text/javascript">
-      $("input.impl").change(AB.plot.selectionChanged);
-    </script>
-  </div>
-  <a id="zoom-out" href="javascript:AB.plot.zoomOut()">Zoom out</a>
-  <ul id="hidden-benchmarks">
-  </ul>
-  <!-- TMPL_LOOP benchmarks -->
-  <div id="<!-- tmpl_var benchmark -->" class="graph">
-    <div class="graph-title">
-      <a name="<!-- TMPL_VAR benchmark -->"></a>
-      <a href="#<!-- TMPL_VAR benchmark -->">
-       <h3><!-- TMPL_VAR benchmark --></h3>
-      </a>
-      <a onclick="AB.userPrefs.hideBenchmark($(this).parent().parent()); return false" href="#">&times;</a>
+  <h1>Boinkmarks</h1>
+  <h2>Automated Lisp implementation benchmarks</h2>
+  <div id="sidebar">
+    <div class="box" id="impl-selector">
+      <h3>Implementations</h3>
+      <form id="impl-selector-form">
+      <!-- tmpl_loop implementations -->
+        <p>
+          <input class="impl" type="checkbox" id="<!-- tmpl_var implspec -->"
+                 name="<!-- tmpl_var implspec -->"
+                 autocomplete="off"
+                 <!-- tmpl_if selected -->
+                   checked="checked"
+                 <!-- /tmpl_if -->>
+          <label for="<!-- tmpl_var implspec -->"
+          ><!-- tmpl_var pretty-name --></label>
+       </p>
+      <!-- /tmpl_loop -->
+      </form>
+      <script type="text/javascript">
+        $("input.impl").change(AB.plot.selectionChanged);
+      </script>
     </div>
-    <div class="graph-container">
-      <div class="graph-canvas-container" id="<!-- TMPL_VAR id -->" style="height:300px;width:700px; "></div>
+    <div id="zoom-box" class="box">
+      <h3>Showing release <span id="zoom-release-spec"></span></h3>
+      <button id="zoom-out" onclick="AB.plot.zoomOut();return false;">Zoom out</a>
     </div>
-    <script type="text/javascript" defer="defer">
-       AB.plot.benchmark_element['<!-- TMPL_VAR benchmark -->'] = $('#<!-- TMPL_VAR id -->');
-       AB.plot.element_benchmark['<!-- TMPL_VAR id -->'] = '<!-- TMPL_VAR benchmark -->';
-       AB.mouse.initListener($('#<!-- TMPL_VAR id -->'));
-    </script>
+    <div id="hidden-benchmarks-box" class="box">
+      <h3>Hidden benchmarks</h3>
+      <ul id="hidden-benchmarks">
+      </ul>
+    </div>
   </div>
-  <!-- /TMPL_LOOP -->
+  <div id="graphs">
+    <!-- TMPL_LOOP benchmarks -->
+    <div id="<!-- tmpl_var benchmark -->" class="graph">
+      <div class="graph-title">
+        <a name="<!-- TMPL_VAR benchmark -->"></a>
+        <a href="#<!-- TMPL_VAR benchmark -->">
+         <h3><!-- TMPL_VAR benchmark --></h3>
+        </a>
+      </div>
+      <div class="graph-buttons">
+        <div>
+          <a class="hide" title="Hide benchmark" onclick="AB.userPrefs.hideBenchmark($(this).parent().parent().parent()); return false" href="#">&times;</a>
+        </div>
+      </div>
+      <div class="graph-container">
+        <div class="graph-canvas-container" id="<!-- TMPL_VAR id -->"></div>
+      </div>
+      <script type="text/javascript" defer="defer">
+         AB.plot.benchmark_element['<!-- TMPL_VAR benchmark -->'] = $('#<!-- TMPL_VAR id -->');
+         AB.plot.element_benchmark['<!-- TMPL_VAR id -->'] = '<!-- TMPL_VAR benchmark -->';
+         AB.mouse.initListener($('#<!-- TMPL_VAR id -->'));
+      </script>
+    </div>
+    <!-- /TMPL_LOOP -->
+  </div>
 <script type="text/javascript" defer="defer">
  AB.userPrefs.init();
  AB.plot.init();
