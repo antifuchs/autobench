@@ -1,0 +1,1 @@
+../../vendor/jstore/jquery.jstore-all-min.js
