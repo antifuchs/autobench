@@ -135,6 +135,15 @@
       (doquery (:order-by
                 (:select 'benchmark-name 'release-date 'version-number
                          'version-code
+                         (:as (:exists (:select 'version-id :from (:as 'versions 'subversions)
+                                                :where (:and (:= 'subversions.implementation-name
+                                                                 implementation-name)
+                                                             (:= 'subversions.belongs-to-release
+                                                                 'versions.version-number)
+                                                             (:not
+                                                              (:= 'subversions.belongs-to-release
+                                                                  'subversions.version-number)))))
+                              'zoomp)
                          (:as (:avg 'seconds) 'seconds)
                          (:as (:/ (:stddev 'seconds) (:count 'seconds))
                               'error)
@@ -150,14 +159,15 @@
                          :group-by 'benchmark-name 'release-date
                          'version-number 'version-code)
                 (:desc 'release-date))
-          (benchmark release-date version-number version-code seconds error)
+          (benchmark release-date version-number version-code zoomp seconds error)
         (push (list (ut-to-flot-timestamp release-date) seconds error)
               (gethash benchmark result-times ()))
         (unless (gethash (ut-to-flot-timestamp release-date)
                          result-versions)
+          (format *debug-io* "zoomp ~A = ~A~%" version-number zoomp)
           (setf (gethash (ut-to-flot-timestamp release-date)
                          result-versions)
-                `(,version-number
+                `(,version-number ,(st-json:as-json-bool zoomp)
                   ,@(when version-code
                       (list version-code))))))
       (st-json:write-json-to-string
