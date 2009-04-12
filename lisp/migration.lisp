@@ -66,6 +66,7 @@
   ;; Create indexes/PK constraints now:  
   (run-query "alter table builds add primary key (version_id, mode)")
   (run-query "alter table versions add primary key (version_id)")
+  (run-query "create index release_subversions_idx on versions(implementation_name, belongs_to_release)")
   (run-query "create unique index version_uniqueness_idx on versions(implementation_name, version_number)")
   (run-query "alter table results add primary key (version_id, mode, result_date, benchmark_name)")
   (run-query "alter table implementations add primary key (implementation_name, mode, machine_name)")
