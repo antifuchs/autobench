@@ -67,67 +67,6 @@
       (sql (:and (:= 'implementation-name implementation-name)
                  (:= 'belongs-to-release only-release)))))
 
-;;; Incremental st-json writing:
-
-(defvar *in-comma-separated-structure* ())
-(defvar *after-first-element* ())
-
-(defun in-comma-separated-structure-p (stream)
-  (cdr (assoc stream *in-comma-separated-structure*)))
-
-(defun after-first-element-p (stream)
-  (and (in-comma-separated-structure-p stream)
-       (cdr (assoc stream *after-first-element*))))
-
-(defun (setf after-first-element-p) (new-value stream)
-  (when (assoc stream *after-first-element*)
-    (rplacd (assoc stream *after-first-element*) new-value)))
-
-(defun invoke-writing-json-comma-separated-structure (stream function)
-  (let ((*in-comma-separated-structure* (cons (cons stream t) *in-comma-separated-structure*))
-        (*after-first-element* (cons (cons stream nil) *after-first-element*)))
-    (funcall function)))
-
-(defun invoke-writing-json-array (stream function)
-  (princ #\[ stream)
-  (prog1 (invoke-writing-json-comma-separated-structure stream function)
-         (princ #\] stream)))
-
-(defun invoke-writing-json-assoc (stream function)
-  (princ #\{ stream)
-  (prog1 (invoke-writing-json-comma-separated-structure stream function)
-         (princ #\} stream)))
-
-(defmacro writing-json-array ((stream) &body body)
-  `(invoke-writing-json-array ,stream
-                              (lambda () ,@body)))
-
-(defmacro writing-json-assoc ((stream) &body body)
-  `(invoke-writing-json-assoc ,stream
-                             (lambda () ,@body)))
-
-(defun write-json-assoc (stream key value)
-  (st-json:write-json key stream)
-  (princ #\: stream)
-  (let ((*in-comma-separated-structure* nil))
-    (st-json:write-json value stream)))
-
-(defun json-assoc-key (stream key)
-  (st-json:write-json key stream)
-  (princ #\: stream))
-
-(defmacro writing-assoc-value ((stream) &body body)
-  `(let (*in-comma-separated-structure* (cons (cons ,stream nil) *in-comma-separated-structure*))
-     ,@body))
-
-(defmethod st-json:write-json-element :before (element stream)
-  (declare (ignore element))
-  (cond
-    ((after-first-element-p stream)
-     (princ #\, stream))
-    ((in-comma-separated-structure-p stream)
-     (setf (after-first-element-p stream) t))))
-
 (defun implementation-run-times (implementation-name mode host only-release)
   (with-db-connection ()
     (let ((result-times (make-hash-table :test 'equal))
