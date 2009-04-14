@@ -334,6 +334,7 @@ AB.userPrefs = (function(){
       $(elt).removeClass('hidden');
       $('ul#hidden-benchmarks li a[class='+$(elt).attr('id')+']').parent().remove();
       AB.plot.drawOne($(elt).attr('id'));
+      window.location.hash = $(elt).attr('id');
     },
     
     updateHideCookieValue: function(){
