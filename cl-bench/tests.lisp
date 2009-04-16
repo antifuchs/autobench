@@ -1,6 +1,6 @@
 ;;; all the performance benchmarks
 ;;;
-;;; Time-stamp: <2006-11-07 17:51:50 asf>
+;;; Time-stamp: <2009-04-16 12:35:51 asf>
 
 
 (in-package :cl-bench)
@@ -9,168 +9,168 @@
 (defbench compiler
     :function 'cl-bench.misc:run-compiler
     :long "Compilation of the Gabriel benchmarks"
-    :runs 3
+    :runs 5
     :disabled-for '(armedbear))
 
 (defbench load-fasl
     :function 'cl-bench.misc:run-fasload
-    :runs 20
+    :runs 136
     :disabled-for '(armedbear))
 
 (defbench sum-permutations
     :long "traversal of a large, linked, self-sharing structure"
     :function 'cl-bench.misc:run-permutations
-    :runs 2
+    :runs 5
     :disabled-for '(lispworks-personal-edition))
 
 (defbench walk-list/seq
     :long "Walk a list of 2M fixnums that were sequentially allocated"
     :setup 'cl-bench.misc::setup-walk-list/seq
     :function 'cl-bench.misc:walk-list/seq
-    :runs 2
+    :runs 156
     :disabled-for '(lispworks-personal-edition))
 
 (defbench walk-list/mess
     :long "Walk a list of 2M fixnums that were mergesorted to spread pointers"
     :setup 'cl-bench.misc::setup-walk-list/mess
     :function 'cl-bench.misc:walk-list/mess
-    :runs 1
+    :runs 17
     :disabled-for '(lispworks-personal-edition poplog))
 
 (defbench boyer
   :group :gabriel
   :function 'cl-bench.gabriel:boyer
   :long "CONS-intensive logic-programming code"
-  :runs 30)
+  :runs 10)
 
 (defbench browse
   :group :gabriel
   :function 'cl-bench.gabriel:browse
-  :runs 10)
+  :runs 63)
 
 (defbench dderiv
   :group :gabriel
   :function 'cl-bench.gabriel:dderiv-run
-  :runs 50)
+  :runs 333)
 
 (defbench deriv
   :group :gabriel
   :function 'cl-bench.gabriel:deriv-run
-  :runs 60)
+  :runs 351)
 
 (defbench destructive
   :group :gabriel
   :function 'cl-bench.gabriel:run-destructive
-  :runs 100)
+  :runs 987)
 
 (defbench div2-test-1
   :group :gabriel
   :function 'cl-bench.gabriel:run-div2-test1
-  :runs 200)
+  :runs 785)
 
 (defbench div2-test-2
   :group :gabriel
   :function 'cl-bench.gabriel:run-div2-test2
-  :runs 200)
+  :runs 646)
 
 (defbench fft
   :group :gabriel
   :function 'cl-bench.gabriel:run-fft
-  :runs 30)
+  :runs 2044)
 
 (defbench frpoly/fixnum
   :group :gabriel
   :function 'cl-bench.gabriel:run-frpoly/fixnum
-  :runs 100)
+  :runs 795)
 
 (defbench frpoly/bignum
   :group :gabriel
   :function 'cl-bench.gabriel:run-frpoly/bignum
-  :runs 30)
+  :runs 335)
 
 (defbench frpoly/float
   :group :gabriel
   :function 'cl-bench.gabriel:run-frpoly/float
-  :runs 100)
+  :runs 640)
 
 (defbench puzzle
   :group :gabriel
   :long "Forest Baskett's Puzzle, exercising simple-vectors"
   :function 'cl-bench.gabriel:run-puzzle
-  :runs 1500)
+  :runs 23793)
 
 (defbench tak
   :group :gabriel
   :function 'cl-bench.gabriel:run-tak
-  :runs 500)
+  :runs 6159)
 
 (defbench ctak
     :group :gabriel
     :long "TAKeuchi function using the catch/throw facility"
     :function 'cl-bench.gabriel:run-ctak
-    :runs 900)
+    :runs 11838)
 
 (defbench trtak
     :group :gabriel
     :long "TAKeuchi function without tail recursion"
     :function 'cl-bench.gabriel:run-trtak
-    :runs 500)
+    :runs 6173)
 
 (defbench takl
     :group :gabriel
     :long "TAKeuchi function with lists as counters"
     :function 'cl-bench.gabriel:run-takl
-    :runs 150)
+    :runs 1357)
 
 (defbench stak
     :group :gabriel
     :long "TAKeuchi function with special variables instead of parameter passing"
     :function 'cl-bench.gabriel:run-stak
-    :runs 200)
+    :runs 1576)
 
 (defbench fprint/ugly
     :group :gabriel
     :long "Pretty-printer and write operations to file, no *PRINT-PRETTY*"
     :function 'cl-bench.gabriel:fprint/ugly
-    :runs 200)
+    :runs 315)
 
 (defbench fprint/pretty
     :group :gabriel
     :long "Pretty-printer and write operations to file, with *PRINT-PRETTY*"
     :function 'cl-bench.gabriel:fprint/pretty
-    :runs 100)
+    :runs 61)
 
 (defbench traverse
   :group :gabriel
   :long "Creates and traverses a tree structure"
   :function 'cl-bench.gabriel:run-traverse
-  :runs 15)
+  :runs 20)
 
 (defbench triangle
   :group :gabriel
   :long "Puzzle solving (board game) using combinatorial search"
   :function 'cl-bench.gabriel:run-triangle
-  :runs 5)
+  :runs 27)
 
 ;; end of Gabriel benchmarks
 
 (defbench richards
     :long "Operating system simulation"
     :function 'cl-bench.richards:richards
-    :runs 5)
+    :runs 34)
 
 (defbench factorial
     :function 'cl-bench.math:run-factorial
-    :runs 1000)
+    :runs 15853)
 
 (defbench fib
     :function 'cl-bench.math:run-fib
-    :runs 50)
+    :runs 590)
 
 (defbench fib-ratio
     :group :math
     :function 'cl-bench.math:run-fib-ratio
-    :runs 500)
+    :runs 38806)
 
 (defbench ackermann
     :long "Calculating Ackermann's number (heavy recursion)"
@@ -182,49 +182,49 @@
     :group :math
     :long "Mandelbrot Set computation using complex numbers"
     :function 'cl-bench.math:run-mandelbrot/complex
-    :runs 1000)
+    :runs 539)
 
 (defbench mandelbrot/dfloat
     :group :math
     :long "Mandelbrot Set computation using double-floats"
     :function 'cl-bench.math:run-mandelbrot/dfloat
-    :runs 1000)
+    :runs 993)
 
 (defbench mrg32k3a
     :group :math
     :long "multiple recursive random number generator of l'Ecuyer"
     :function 'cl-bench.math:run-mrg32k3a
-    :runs 20)
+    :runs 1000)
 
 (defbench crc40
     :long "Cyclic redundancy check calculation using 40-bit integers"
     :function 'cl-bench.crc:run-crc40
-    :runs 2)
+    :runs 10)
 
 (defbench bignum/elem-100-1000
     :group :bignum
     :function 'cl-bench.bignum:run-elem-100-1000
-    :runs 1)
+    :runs 36)
 
 (defbench bignum/elem-1000-100
     :group :bignum
     :function 'cl-bench.bignum:run-elem-1000-100
-    :runs 1)
+    :runs 32)
 
 (defbench bignum/elem-10000-1
     :group :bignum
     :function 'cl-bench.bignum:run-elem-10000-1
-    :runs 1)
+    :runs 56)
 
 (defbench bignum/pari-100-10
     :group :bignum
     :function 'cl-bench.bignum:run-pari-100-10
-    :runs 1)
+    :runs 223)
 
 (defbench bignum/pari-200-5
     :group :bignum
     :function 'cl-bench.bignum:run-pari-200-5
-    :runs 1)
+    :runs 84)
 
 ;; this one takes ages to run
 #+slow-tests
@@ -236,82 +236,88 @@
 
 (defbench pi-decimal/small
     :function 'cl-bench.bignum:run-pi-decimal/small
-    :runs 100)
+    :runs 556)
 
 (defbench pi-decimal/big
     :group :bignum
     :function 'cl-bench.bignum:run-pi-decimal/big
-    :runs 2)
+    :runs 90)
 
 (defbench pi-atan
     :group :bignum
     :function 'cl-bench.bignum:run-pi-atan
-    :runs 200)
+    :runs 1046)
 
 (defbench pi-ratios
     :function 'cl-bench.ratios:run-pi-ratios
-    :runs 2)
+    :runs 6)
 
 (defbench slurp-lines
     :long "Line-by-line read of a large file (mostly testing allocation speed)"
     :function 'cl-bench.hash:run-slurp-lines
-    :runs 30)
+    :runs 45)
 
 (defbench hash-strings
     :function 'cl-bench.hash:hash-strings
-    :runs 2)
+    :runs 18)
 
 (defbench hash-integers
     :function 'cl-bench.hash:hash-integers
-    :runs 10)
+    :runs 34)
 
 (defbench boehm-gc
     :group :gc
     :function 'cl-bench.boehm-gc:gc-benchmark
-    :runs 1
+    :runs 2
     :disabled-for '(lispworks-personal-edition))
 
 (defbench deflate-file
     :function 'cl-bench.deflate:run-deflate-file
-    :runs 100)
+    :runs 815)
 
 ;; these tests exceed the limited stack size in the trial version of LW
 (defbench 1d-arrays
     :long "Adding together two vectors"
     :function 'cl-bench.arrays:bench-1d-arrays
-    :runs 1
+    :setup 'cl-bench.arrays:bench-1d-arrays-setup
+    :runs (* 36 10)
     :disabled-for '(lispworks-personal-edition))
 
 (defbench 2d-arrays
     :long "Adding together two 2-dimensional arrays"
     :function 'cl-bench.arrays:bench-2d-arrays
-    :runs 1
+    :setup 'cl-bench.arrays:bench-2d-arrays-setup
+    :runs (* 6 10)
     :disabled-for '(lispworks-personal-edition))
 
 (defbench 3d-arrays
     :long "Adding together two 3-dimensional arrays"
     :function 'cl-bench.arrays:bench-3d-arrays
-    :runs 1
+    :setup 'cl-bench.arrays:bench-3d-arrays-setup
+    :runs (* 2 10)
     :disabled-for '(lispworks-personal-edition))
 
 ;; Poplog seems to have a buggy implementation of bitvectors
 (defbench bitvectors
     :long "BIT-XOR, BIT-AND on big bitvectors"
     :function 'cl-bench.arrays:bench-bitvectors
-    :runs 3
+    :setup 'cl-bench.arrays:bench-bitvectors-setup
+    :runs (* 11 700)
     :disabled-form '(lispworks-personal-edition poplog))
 
 (defbench bench-strings
     :long "Allocate and fill large strings"
     :function 'cl-bench.arrays:bench-strings
-    :runs 1
+    :setup 'cl-bench.arrays:bench-strings-setup
+    :runs (* 6 50)
     :disabled-for '(lispworks-personal-edition))
 
 (defbench fill-strings/adjust
     :short "fill-strings/adjustable"
     :long "Fill an adjustable array with characters"
+    :setup 'cl-bench.arrays:bench-strings/adjustable
     :function 'cl-bench.arrays:bench-strings/adjustable
-    :runs 1
+    :runs (* 1 100)
     :disabled-for '(lispworks-personal-edition))
 
 ;; as of 2002-01-20 this crashes CLISP, both release and CVS versions.
@@ -320,13 +326,15 @@
 (defbench string-concat
     :long "WITH-OUTPUT-TO-STRING and much output"
     :function 'cl-bench.arrays:bench-string-concat
-    :runs 1
+    :setup 'cl-bench.arrays:bench-string-concat-setup
+    :runs (* 1 20)
     :disabled-for '(clisp allegro lispworks-personal-edition poplog))
 
 (defbench search-sequence
     :long "FIND, FIND-IF, POSITION on a simple-vector"
     :function 'cl-bench.arrays:bench-search-sequence
-    :runs 1
+    :setup 'cl-bench.arrays:bench-search-sequence-setup
+    :runs (* 1 10)
     :disabled-for '(lispworks-personal-edition))
 
 (defbench clos-defclass
@@ -351,7 +359,7 @@
      :short "CLOS/simple-instantiate"
      :long "Instantiates a simple class hierarchy"
      :function 'cl-bench.clos:make-instances/simple
-     :runs 200)
+     :runs 1000)
 
 (defbench methodcalls
     :short "CLOS/methodcalls"
@@ -369,13 +377,13 @@
     :short "CLOS/complex-methods"
     :long "Run methodcalls with and method combination."
     :function 'cl-bench.clos:methodcalls/complex
-    :runs 5
+    :runs 20
     :disabled-for '(clisp poplog))
 
 (defbench eql-specialized-fib
     :long "Fibonnaci function implemented with EQL specialization"
     :function 'cl-bench.clos:run-eql-fib
-    :runs 2)
+    :runs 33)
 
 ;; this is really a test of the speed of loading a source file full of data
 #+nil
@@ -398,12 +406,12 @@
 (defbench make-list-sequential/push-nreverse
     :long "Cons up a sequential list with push/nreverse"
     :function `cl-bench.misc:make-list-sequential/push-nreverse
-    :runs 5)
+    :runs 4)
 
 (defbench make-list-sequential/rplacd
     :long "Cons up a sequential list with push/nreverse"
     :function `cl-bench.misc:make-list-sequential/rplacd
-    :runs 5)
+    :runs 4)
 
 #+(or sbcl cmu)
 (defbench-untimed core-file-size

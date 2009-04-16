@@ -1,4 +1,4 @@
-;;; auto-generated from file NIL
+;;; auto-generated from file #P"/Users/asf/Documents/hack/autobench/cl-bench/generate.lisp"
 (IN-PACKAGE :CL-USER)
 (LOAD #P"defpackage.lisp")
 (COMPILE-FILE #P"files/arrays.olisp")

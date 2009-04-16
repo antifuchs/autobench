@@ -1,0 +1,4 @@
+#!/bin/sh
+
+cd "$(dirname "$0")"
+sbcl --load "generate.lisp" --eval '(quit)'
