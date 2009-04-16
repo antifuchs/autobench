@@ -333,19 +333,19 @@
 
 #-(OR LISPWORKS-PERSONAL-EDITION)
 (when (run-benchmark-p 'FILL-STRINGS/ADJUST benchmarks-to-run)
-  (format t "=== running #<benchmark fill-strings/adjustable for 100 runs>~%")
+  (format t "=== running #<benchmark fill-strings/adjustable for 400 runs>~%")
   (force-output)
   (bench-gc)
   (funcall 'CL-BENCH.ARRAYS:BENCH-STRINGS/ADJUSTABLE)
-  (BENCH-REPORT 'CL-BENCH.ARRAYS:BENCH-STRINGS/ADJUSTABLE "fill-strings/adjustable" 100))
+  (BENCH-REPORT 'CL-BENCH.ARRAYS:BENCH-STRINGS/ADJUSTABLE "fill-strings/adjustable" 400))
 
 #-(OR CLISP ALLEGRO LISPWORKS-PERSONAL-EDITION POPLOG)
 (when (run-benchmark-p 'STRING-CONCAT benchmarks-to-run)
-  (format t "=== running #<benchmark STRING-CONCAT for 20 runs>~%")
+  (format t "=== running #<benchmark STRING-CONCAT for 100 runs>~%")
   (force-output)
   (bench-gc)
   (funcall 'CL-BENCH.ARRAYS:BENCH-STRING-CONCAT-SETUP)
-  (BENCH-REPORT 'CL-BENCH.ARRAYS:BENCH-STRING-CONCAT "STRING-CONCAT" 20))
+  (BENCH-REPORT 'CL-BENCH.ARRAYS:BENCH-STRING-CONCAT "STRING-CONCAT" 100))
 
 #-(OR LISPWORKS-PERSONAL-EDITION)
 (when (run-benchmark-p 'SEARCH-SEQUENCE benchmarks-to-run)
