@@ -1,6 +1,6 @@
 ;;; all the performance benchmarks
 ;;;
-;;; Time-stamp: <2009-04-16 15:51:43 asf>
+;;; Time-stamp: <2009-04-16 16:05:40 asf>
 
 
 (in-package :cl-bench)
@@ -380,7 +380,7 @@
     :short "CLOS/complex-methods"
     :long "Run methodcalls with and method combination."
     :function 'cl-bench.clos:methodcalls/complex
-    :runs 60
+    :runs 120
     :disabled-for '(clisp poplog))
 
 (defbench eql-specialized-fib
