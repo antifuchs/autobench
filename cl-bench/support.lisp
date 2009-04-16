@@ -1,7 +1,7 @@
 ;;; support.lisp --- performance benchmarks for Common Lisp implementations
 ;;
 ;; Author: Eric Marsden  <emarsden@laas.fr>
-;; Time-stamp: <2006-11-07 17:55:08 asf>
+;; Time-stamp: <2009-04-16 14:52:55 asf>
 ;;
 ;;
 ;; The benchmarks consist of
@@ -71,6 +71,8 @@ If they can not be retrieved, return NIL."
                    :initform nil)
      (setup    :initarg :setup
                :initform nil)
+     (teardown :initarg :teardown
+               :initform nil)
      (function :initarg :function
                :accessor benchmark-function)))
 
@@ -139,10 +141,11 @@ If they can not be retrieved, return NIL."
        (dolist (b (reverse *benchmarks*))
          (bench-gc)
          (with-spawned-thread
-             (with-slots (setup function short runs) b
+             (with-slots (setup teardown function short runs) b
                (when setup (funcall setup))
                (format t "~&=== running ~a~%" b)
-               (bench-report function short runs))))
+               (unwind-protect (bench-report function short runs)
+                 (when teardown (funcall teardown))))))
        (bench-report-footer))))
 
 (defun run-benchmark-p (benchmark benchmarks-to-run)
