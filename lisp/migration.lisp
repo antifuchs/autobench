@@ -105,8 +105,6 @@
 (defmigration 1-add-commit-hash
   "Add the commit SHA1 for versions that we know"
   (run-query "alter table versions add version_code varchar(90)")
-      (format t "whoa~%")
-    
   (with-current-directory (getf (rest (find 'sbcl *implementations-to-build*
                                             :key #'first))
                                 :directory)
