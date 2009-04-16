@@ -1,6 +1,6 @@
 ;;; all the performance benchmarks
 ;;;
-;;; Time-stamp: <2009-04-16 14:00:41 asf>
+;;; Time-stamp: <2009-04-16 14:22:06 asf>
 
 
 (in-package :cl-bench)
@@ -27,21 +27,21 @@
     :long "Walk a list of 2M fixnums that were sequentially allocated"
     :setup 'cl-bench.misc::setup-walk-list/seq
     :function 'cl-bench.misc:walk-list/seq
-    :runs 1560
+    :runs 15600
     :disabled-for '(lispworks-personal-edition))
 
 (defbench walk-list/mess
     :long "Walk a list of 2M fixnums that were mergesorted to spread pointers"
     :setup 'cl-bench.misc::setup-walk-list/mess
     :function 'cl-bench.misc:walk-list/mess
-    :runs 170
+    :runs 1700
     :disabled-for '(lispworks-personal-edition poplog))
 
 (defbench boyer
   :group :gabriel
   :function 'cl-bench.gabriel:boyer
   :long "CONS-intensive logic-programming code"
-  :runs 8)
+  :runs 4)
 
 (defbench browse
   :group :gabriel
@@ -102,7 +102,7 @@
 (defbench tak
   :group :gabriel
   :function 'cl-bench.gabriel:run-tak
-  :runs 6159)
+  :runs 8000)
 
 (defbench ctak
     :group :gabriel
@@ -114,7 +114,7 @@
     :group :gabriel
     :long "TAKeuchi function without tail recursion"
     :function 'cl-bench.gabriel:run-trtak
-    :runs 6173)
+    :runs 8000)
 
 (defbench takl
     :group :gabriel
@@ -199,7 +199,7 @@
 (defbench crc40
     :long "Cyclic redundancy check calculation using 40-bit integers"
     :function 'cl-bench.crc:run-crc40
-    :runs 2)
+    :runs 1)
 
 (defbench bignum/elem-100-1000
     :group :bignum
@@ -263,7 +263,7 @@
 
 (defbench hash-integers
     :function 'cl-bench.hash:hash-integers
-    :runs 56)
+    :runs 110)
 
 (defbench boehm-gc
     :group :gc
@@ -309,7 +309,7 @@
     :long "Allocate and fill large strings"
     :function 'cl-bench.arrays:bench-strings
     :setup 'cl-bench.arrays:bench-strings-setup
-    :runs (* 4 50)
+    :runs (* 2 50)
     :disabled-for '(lispworks-personal-edition))
 
 (defbench fill-strings/adjust
@@ -317,7 +317,7 @@
     :long "Fill an adjustable array with characters"
     :setup 'cl-bench.arrays:bench-strings/adjustable
     :function 'cl-bench.arrays:bench-strings/adjustable
-    :runs (* 3 10)
+    :runs (* 2 10)
     :disabled-for '(lispworks-personal-edition))
 
 ;; as of 2002-01-20 this crashes CLISP, both release and CVS versions.
@@ -341,7 +341,7 @@
     :short "CLOS/defclass"
     :long "Defines a class hierarchy"
     :function 'cl-bench.clos:run-defclass
-    :runs 5)
+    :runs 1)
 
 (defbench clos-defmethod
     :short "CLOS/defmethod"
@@ -353,7 +353,7 @@
      :short "CLOS/instantiate"
      :long "Instantiates a complicated class hierarchy"
      :function 'cl-bench.clos:make-instances
-     :runs 2)
+     :runs 1)
 
 (defbench clos-instantiate
      :short "CLOS/simple-instantiate"
