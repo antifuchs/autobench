@@ -1,7 +1,7 @@
 ;; clos.lisp -- CLOS benchmarking code
 ;;
 ;; Author: Eric Marsden <emarsden@laas.fr>
-;; Time-stamp: <2003-12-30 emarsden>
+;; Time-stamp: <2009-04-16 15:10:57 asf>
 ;;
 ;;
 ;; This file does some benchmarking of CLOS functionality. It creates
@@ -150,6 +150,9 @@
 (defun run-defclass ()
   (funcall (compile nil `(lambda () ,@(defclass-forms)))))
 
+(defun setup-defmethod ()
+  (setf (symbol-function 'simple-method) nil))
+
 (defun run-defmethod ()
   (funcall (compile nil `(lambda () ,@(defmethod-forms)))))
 
@@ -195,8 +198,10 @@
   (dotimes (w #.+hierarchy-width+)
     (methodcall/simple w)))
 
+(defun setup-methodcalls/simple+after ()
+  (add-after-methods))
+
 (defun methodcalls/simple+after ()
-  (add-after-methods)
   (dotimes (w #.+hierarchy-width+)
     (methodcall/simple w)))
 
