@@ -1550,9 +1550,9 @@
     tak
     (if (not (< y x))
 	(return z)
-	(let ((a (tak (1- x) y z))
-	      (b (tak (1- y) z x)))
-	  (setq z (tak (1- z) x y)
+	(let ((a (trtak (1- x) y z))
+	      (b (trtak (1- y) z x)))
+	  (setq z (trtak (1- z) x y)
 		x a
 		y b)
 	  (go tak)))))
