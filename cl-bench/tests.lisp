@@ -1,6 +1,6 @@
 ;;; all the performance benchmarks
 ;;;
-;;; Time-stamp: <2009-04-16 14:22:06 asf>
+;;; Time-stamp: <2009-04-16 14:45:04 asf>
 
 
 (in-package :cl-bench)
@@ -27,14 +27,14 @@
     :long "Walk a list of 2M fixnums that were sequentially allocated"
     :setup 'cl-bench.misc::setup-walk-list/seq
     :function 'cl-bench.misc:walk-list/seq
-    :runs 15600
+    :runs 650
     :disabled-for '(lispworks-personal-edition))
 
 (defbench walk-list/mess
     :long "Walk a list of 2M fixnums that were mergesorted to spread pointers"
     :setup 'cl-bench.misc::setup-walk-list/mess
     :function 'cl-bench.misc:walk-list/mess
-    :runs 1700
+    :runs 280
     :disabled-for '(lispworks-personal-edition poplog))
 
 (defbench boyer
