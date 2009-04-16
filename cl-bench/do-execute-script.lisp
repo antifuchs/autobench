@@ -365,6 +365,7 @@
   (format t "=== running #<benchmark CLOS/defmethod for 3 runs>~%")
   (force-output)
   (bench-gc)
+  (CL-BENCH.CLOS::SETUP-DEFMETHOD)
   (BENCH-REPORT 'CL-BENCH.CLOS:RUN-DEFMETHOD "CLOS/defmethod" 3))
 (when (run-benchmark-p 'CLOS-INSTANTIATE benchmarks-to-run)
   (format t "=== running #<benchmark CLOS/instantiate for 1 runs>~%")
@@ -385,6 +386,7 @@
   (format t "=== running #<benchmark CLOS/method+after for 8 runs>~%")
   (force-output)
   (bench-gc)
+  (CL-BENCH.CLOS::SETUP-METHODCALLS/SIMPLE+AFTER)
   (BENCH-REPORT 'CL-BENCH.CLOS:METHODCALLS/SIMPLE+AFTER "CLOS/method+after" 8))
 
 #-(OR CLISP POPLOG)
