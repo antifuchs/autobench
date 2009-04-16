@@ -1,6 +1,6 @@
 ;;; defpackage.lisp -- DEFPACKAGE forms for the cl-bench modules
 ;;
-;; Time-stamp: <2005-11-13 10:58:26 asf>
+;; Time-stamp: <2009-04-16 12:25:31 asf>
 
 
 (defpackage :cl-bench
@@ -88,7 +88,16 @@
            #:bench-strings
            #:bench-strings/adjustable
            #:bench-string-concat
-           #:bench-search-sequence))
+           #:bench-search-sequence
+
+           #:bench-1d-arrays-setup
+           #:bench-2d-arrays-setup
+           #:bench-3d-arrays-setup
+           #:bench-bitvectors-setup
+           #:bench-strings-setup
+           #:bench-strings/adjustable-setup
+           #:bench-string-concat-setup
+           #:bench-search-sequence-setup))
 
 (defpackage :cl-bench.richards
   (:use :common-lisp)
