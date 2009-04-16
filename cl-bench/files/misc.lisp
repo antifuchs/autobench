@@ -1,6 +1,6 @@
 ;;; misc.lisp
 ;;;
-;;; Time-stamp: <2009-04-16 14:53:25 asf>
+;;; Time-stamp: <2009-04-16 14:57:55 asf>
 
 
 (in-package :cl-bench.misc)
@@ -157,7 +157,7 @@
 (defun setup-walk-list/seq ()
   (setf *big-seq-list* (make-big-list 2000000)))
 
-(defun teardown-walk-list/mess ()
+(defun teardown-walk-list/seq ()
   (setf *big-seq-list* nil))
 
 ;; walk the list to calculate its length
