@@ -1,6 +1,6 @@
 ;;; all the performance benchmarks
 ;;;
-;;; Time-stamp: <2009-04-16 15:29:28 asf>
+;;; Time-stamp: <2009-04-16 15:39:24 asf>
 
 
 (in-package :cl-bench)
@@ -28,7 +28,7 @@
     :setup 'cl-bench.misc::setup-walk-list/seq
     :teardown 'cl-bench.misc::teardown-walk-list/seq
     :function 'cl-bench.misc:walk-list/seq
-    :runs 650
+    :runs 300
     :disabled-for '(lispworks-personal-edition))
 
 (defbench walk-list/mess
@@ -36,7 +36,7 @@
     :setup 'cl-bench.misc::setup-walk-list/mess
     :teardown 'cl-bench.misc::teardown-walk-list/mess
     :function 'cl-bench.misc:walk-list/mess
-    :runs 280
+    :runs 140
     :disabled-for '(lispworks-personal-edition poplog))
 
 (defbench boyer
@@ -374,7 +374,7 @@
     :long "Define after methods on our instances, then run some method calls"
     :function 'cl-bench.clos:methodcalls/simple+after
     :setup 'cl-bench.clos::setup-methodcalls/simple+after
-    :runs 8)
+    :runs 35)
 
 (defbench methodcalls/complex
     :short "CLOS/complex-methods"
