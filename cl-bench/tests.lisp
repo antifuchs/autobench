@@ -1,6 +1,6 @@
 ;;; all the performance benchmarks
 ;;;
-;;; Time-stamp: <2009-04-16 16:05:40 asf>
+;;; Time-stamp: <2009-04-16 16:13:48 asf>
 
 
 (in-package :cl-bench)
@@ -192,6 +192,8 @@
     :function 'cl-bench.math:run-mandelbrot/dfloat
     :runs 2970)
 
+;;; This calls the system rng, which isn't very interesting.
+#+(or)
 (defbench mrg32k3a
     :group :math
     :long "multiple recursive random number generator of l'Ecuyer"
