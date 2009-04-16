@@ -1,7 +1,7 @@
 ;; benchmarks speed of array and sequence operations
 ;;
 ;; Author: Eric Marsden <emarsden@laas.fr>
-;; Time-stamp: <2009-04-16 13:07:26 asf>
+;; Time-stamp: <2009-04-16 13:46:50 asf>
 ;;
 ;;
 ;; Timing tests for creation, initialization, access and garbage
