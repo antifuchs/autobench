@@ -1,7 +1,7 @@
 ;; benchmarks speed of array and sequence operations
 ;;
 ;; Author: Eric Marsden <emarsden@laas.fr>
-;; Time-stamp: <2009-04-16 11:55:17 asf>
+;; Time-stamp: <2009-04-16 13:07:26 asf>
 ;;
 ;;
 ;; Timing tests for creation, initialization, access and garbage
@@ -82,7 +82,7 @@
        (nstring-upcase xxx))
   (values))
 
-(def-array-benchmark-fun (bench-strings/adjustable (size 1000000))
+(def-array-benchmark-fun (bench-strings/adjustable (size 200000))
     ()
   (declare (fixnum size))
   (let ((sink (make-array 10 :element-type 'character :adjustable t :fill-pointer 0)))
@@ -93,7 +93,7 @@
 ;; certain implementations such as OpenMCL have an array (and thus
 ;; string) length limit of (expt 2 24), so don't try this on humungous
 ;; sizes
-(def-array-benchmark-fun (bench-string-concat (size 1000000))
+(def-array-benchmark-fun (bench-string-concat (size 200000))
     ()
   (declare (fixnum size))
   (let ((len (length
