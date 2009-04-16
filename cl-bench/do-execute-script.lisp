@@ -390,10 +390,10 @@
 
 #-(OR CLISP POPLOG)
 (when (run-benchmark-p 'METHODCALLS/COMPLEX benchmarks-to-run)
-  (format t "=== running #<benchmark CLOS/complex-methods for 60 runs>~%")
+  (format t "=== running #<benchmark CLOS/complex-methods for 120 runs>~%")
   (force-output)
   (bench-gc)
-  (BENCH-REPORT 'CL-BENCH.CLOS:METHODCALLS/COMPLEX "CLOS/complex-methods" 60))
+  (BENCH-REPORT 'CL-BENCH.CLOS:METHODCALLS/COMPLEX "CLOS/complex-methods" 120))
 (when (run-benchmark-p 'EQL-SPECIALIZED-FIB benchmarks-to-run)
   (format t "=== running #<benchmark EQL-SPECIALIZED-FIB for 50 runs>~%")
   (force-output)
