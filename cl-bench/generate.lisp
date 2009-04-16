@@ -1,6 +1,6 @@
 ;;; generate.lisp
 ;;;
-;;; Time-stamp: <2004-03-14 11:52:03 asf>
+;;; Time-stamp: <2009-04-16 14:54:49 asf>
 ;;
 ;;
 ;; Load into a CL implementation that has a working pathname
@@ -83,7 +83,7 @@
 	     (read f nil nil)))))
      (bench-report-header)~%")
    (dolist (b (reverse *benchmarks*))
-     (with-slots (setup disabled-for function short runs) b
+     (with-slots (setup teardown disabled-for function short runs) b
        (when disabled-for
          (format run "~%#-~S~%" `(or ,@(benchmark-disabled-for b))))
        (format run "(when (run-benchmark-p '~S benchmarks-to-run)~%" (benchmark-name b))
@@ -91,8 +91,10 @@
        (format run "  (force-output)~%") 
        (format run "  (bench-gc)~%")
        (when setup
-         (format run "  (funcall '~S)~%" setup))
-       (format run "  (~S '~S ~S ~S))~%" (report-function-for b) function short runs)))
+         (format run "  (~S)~%" setup))
+       (format run "  (~S '~S ~S ~S))~%" (report-function-for b) function short runs)
+       (when teardown
+         (format run "  (~S)~%" teardown))))
    (format run "(bench-report-footer))))~%")
    (format run "(run-benchmarks)~%")))
 
