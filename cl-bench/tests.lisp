@@ -1,6 +1,6 @@
 ;;; all the performance benchmarks
 ;;;
-;;; Time-stamp: <2009-04-16 12:35:51 asf>
+;;; Time-stamp: <2009-04-16 13:06:16 asf>
 
 
 (in-package :cl-bench)
@@ -317,7 +317,7 @@
     :long "Fill an adjustable array with characters"
     :setup 'cl-bench.arrays:bench-strings/adjustable
     :function 'cl-bench.arrays:bench-strings/adjustable
-    :runs (* 1 100)
+    :runs (* 4 100)
     :disabled-for '(lispworks-personal-edition))
 
 ;; as of 2002-01-20 this crashes CLISP, both release and CVS versions.
@@ -327,7 +327,7 @@
     :long "WITH-OUTPUT-TO-STRING and much output"
     :function 'cl-bench.arrays:bench-string-concat
     :setup 'cl-bench.arrays:bench-string-concat-setup
-    :runs (* 1 20)
+    :runs (* 5 20)
     :disabled-for '(clisp allegro lispworks-personal-edition poplog))
 
 (defbench search-sequence
