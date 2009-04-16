@@ -1,6 +1,6 @@
 ;;; all the performance benchmarks
 ;;;
-;;; Time-stamp: <2009-04-16 15:11:31 asf>
+;;; Time-stamp: <2009-04-16 15:29:28 asf>
 
 
 (in-package :cl-bench)
@@ -349,8 +349,7 @@
     :short "CLOS/defmethod"
     :long "Defines methods on the class hierarchy"
     :function 'cl-bench.clos:run-defmethod
-    :setup 'cl-bench.clos::setup-defmethod
-    :runs 3)
+    :runs 1)
 
 (defbench clos-instantiate
      :short "CLOS/instantiate"
