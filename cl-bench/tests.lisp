@@ -1,6 +1,6 @@
 ;;; all the performance benchmarks
 ;;;
-;;; Time-stamp: <2009-04-16 15:39:24 asf>
+;;; Time-stamp: <2009-04-16 15:51:43 asf>
 
 
 (in-package :cl-bench)
@@ -63,7 +63,7 @@
 (defbench destructive
   :group :gabriel
   :function 'cl-bench.gabriel:run-destructive
-  :runs 2000)
+  :runs 2500)
 
 (defbench div2-test-1
   :group :gabriel
