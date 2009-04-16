@@ -1,6 +1,6 @@
 ;;; misc.lisp
 ;;;
-;;; Time-stamp: <2005-11-13 11:01:20 asf>
+;;; Time-stamp: <2009-04-16 14:41:09 asf>
 
 
 (in-package :cl-bench.misc)
@@ -164,7 +164,7 @@
     (push 42 *big-seq-list*)
     (setf after (length *big-seq-list*))
     (assert (eql after (1+ before)))
-    (setq *big-seq-list* nil)))
+    (setq *big-seq-list* (rest *big-seq-list*))))
 
 
 ;; allocate a large list of fixnums, and merge-sort the list so that
@@ -182,7 +182,7 @@
     (dolist (i *big-mess-list*)
       (incf after))
     (assert (eql after (1+ before)))
-    (setq *big-mess-list* nil)))
+    (setq *big-mess-list* (rest *big-mess-list*))))
 
 
 ;;; so let's settle the argument, once and for all (for cmucl/sbcl at
