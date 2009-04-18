@@ -91,28 +91,48 @@
       (query statement))))
 
 (defun import-release-from-dir (impl dir)
-  (with-transaction (insert-release)
-    (with-savepoint one-implementation
-      (query (:insert-into 'implementations :set
-                           'implementation-name (impl-name impl))))
-    (let ((version-id
-           (or (with-savepoint get-version
-                 (query (:select 'version-id :from 'versions
-                                 :where (:and (:= 'implementation-name (impl-name impl))
-                                              (:= 'version-number (impl-version impl))))
-                        :single))
-               (with-savepoint one-version
-                 (query (:insert-into 'versions :set
-                                      'implementation-name (impl-name impl) 'version-number (impl-version impl)
-                                      'release-date (implementation-release-date impl dir)
-                                      'is-release (release-p impl)
-                                      'belongs-to-release (release-for-version impl)
-                                      :returning 'version-id)
-                        :single)))))
-      (with-savepoint one-build
-        (query (:insert-into 'builds :set
-                             'version-id version-id
-                             'mode (implementation-translated-mode impl)))))))
+  (setf (impl-version impl) (or (impl-version impl)
+                                (version-from-directory impl dir)))
+  (with-db-connection ()
+    (with-transaction (insert-release)
+      (handler-case
+          (with-savepoint one-implementation
+            (query (:insert-into 'implementations :set
+                                 'implementation-name (impl-name impl)
+                                 'mode (prin1-to-string (impl-mode impl))
+                                 'machine-name (machine-instance))))
+        (cl-postgres-error:unique-violation ()
+          nil))
+      (let ((version-id nil))
+        (handler-case
+            (with-savepoint make-version
+              (setf version-id
+                    (query (:insert-into 'versions :set
+                                         'implementation-name (impl-name impl) 'version-number (impl-version impl)
+                                         'release-date (implementation-release-date impl dir)
+                                         'is-release (release-p impl)
+                                         'belongs-to-release (release-for-version impl)
+                                         'version-code (or (implementation-version-code impl dir)
+                                                           :null)
+                                         :returning 'version-id)
+                           :single)))
+          (cl-postgres-error:unique-violation ()
+            (with-savepoint get-version
+              (setf version-id
+                    (query (:select 'version-id :from 'versions
+                                    :where (:and (:= 'implementation-name
+                                                     (impl-name impl))
+                                                 (:= 'version-number
+                                                     (impl-version impl))))
+                           :single)))))
+        (assert (not (null version-id)))
+        (handler-case
+            (with-savepoint one-build
+              (query (:insert-into 'builds :set
+                                   'version-id version-id
+                                   'mode (implementation-translated-mode impl))))
+          (cl-postgres-error:unique-violation ()
+            nil))))))
 
 (defun process-benchmark-data (&optional (dir *base-result-dir*)
                                (machine-name (machine-instance)))
@@ -122,8 +142,9 @@
           (read-benchmark-data file)
         (let ((mtime (simple-date:universal-time-to-timestamp (file-write-date file)))
               (version-id (query (:select 'version-id :from 'versions :where
-                                          (:and (:= 'implementation-name i-name) (:= 'version-number version)))
-                                 :single)))
+                                          (:and (:= 'implementation-name i-name)
+                                                (:= 'version-number version)))
+                                 :single!)))
           ;; First, make sure the benchmarks exist: Since we're in a txn,
           ;; we make one savepoint per benchmark and roll back if a benchmark
           ;; already exists.
@@ -133,7 +154,9 @@
                 (declare (ignore r-secs ignore u-secs))
                 (ignore-errors
                   (with-savepoint one-bm
-                    (query "insert into benchmarks (benchmark_name) values ('~A')" b-name)))))
+                    (query (:insert-into 'benchmarks :set
+                                         'benchmark-name b-name
+                                         'benchmark-version +benchmark-version+))))))
             ;; Now insert the actual benchmark data
             (dolist (b benchmark)
               (destructuring-bind (b-name r-secs u-secs &rest ignore) b
@@ -143,7 +166,10 @@
                                'result-date mtime
                                'version-id version-id
                                'mode mode
-                               'benchmark-name b-name 'machine-name machine-name 'seconds u-secs)))))))
+                               'benchmark-name b-name
+                               'benchmark-version +benchmark-version+
+                               'machine-name machine-name
+                               'seconds u-secs)))))))
       (rename-file file (ensure-directories-exist
                          (merge-pathnames
                           (make-pathname :name (pathname-name file))
