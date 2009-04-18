@@ -12,4 +12,4 @@
 (autobench::load-init-file #p"/opt/lisp/autobench/production/autobench-init.lisp")
 
 (swank:create-server :port *swank-port* :dont-close t)
-(autobench-ht:run-server :port *ht-port* :debug-p nil)
+(print (autobench-ht:run-server :port *ht-port* :debug-p nil))
