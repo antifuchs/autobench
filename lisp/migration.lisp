@@ -15,9 +15,9 @@
 (defparameter *migrations* nil)
 
 (defun perform-missing-migrations ()
-  (dolist (migration (sort (remove-if #'schema-has-migration-p *migrations* :key #'string) #'string<))
-    (format *debug-io* "Migrating ~A~%" migration)
-    (with-db-connection ()
+  (with-db-connection ()
+    (dolist (migration (sort (remove-if #'schema-has-migration-p *migrations* :key #'string) #'string<))
+      (format *debug-io* "Migrating ~A~%" migration)
       (with-transaction ()
         (funcall migration)
         (query (:insert-into 'schema-version :set 'name (string migration)))))))
