@@ -67,6 +67,7 @@
                            (debug* "build:")
                            (handler-bind ((manual-unbuildable
                                            (lambda (c)
+                                             (declare (ignore c))
                                              (setq manual-failed t)
                                              (invoke-restart 'ignore))))
                              (build-in-directory impl dir))
@@ -77,8 +78,8 @@
                            (run-benchmark impl)
                            (debug* "~A" i))
                          (process-benchmark-data))
-           (implementation-unbuildable ()
-             (format *debug-io* "FAIL:~A~%" impl))
+           (implementation-unbuildable (c)
+             (format *debug-io* "FAIL: ~A~%" c))
            (program-exited-abnormally (c)
              (format *debug-io* "~&WEIRD ERROR during ~A:~% ~A~%" impl c)))))
      base-implementation strategies additional-predicate directory
@@ -87,8 +88,13 @@
 (defun benchmark-versions (type versions &rest initargs)
   (iterate (for version in versions)
            (for impl = (apply #'make-instance type :version version initargs))
+           (debug* "~&~A ~A/~A: " (get-universal-time)
+                                 (string-downcase (prin1-to-string impl))
+                                 (string-downcase (prin1-to-string (impl-mode impl))))
+           (debug* "bm~A:" *run-benchmark-n-times*)
            (dotimes (i *run-benchmark-n-times*)
-	     (run-benchmark impl))
+	     (run-benchmark impl)
+             (debug* "~A" i))
            (process-benchmark-data)))
 
 (defun build-and-benchmark (&key (implementations (mapcar #'first *implementations-to-build*)))

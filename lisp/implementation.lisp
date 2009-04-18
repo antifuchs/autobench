@@ -6,7 +6,12 @@
       (mode :accessor impl-mode :allocation :instance :initform nil :initarg :mode)))
 
 (define-condition implementation-unbuildable ()
-  ((implementation :accessor unbuildable-implementation :initarg :implementation)))
+  ((implementation :accessor unbuildable-implementation :initarg :implementation)
+   (condition :accessor unbuildability-cause :initarg :condition))
+  (:report (lambda (c stream)
+             (format stream "~A unbuildable: ~A"
+                     (unbuildable-implementation c)
+                     (unbuildability-cause c)))))
 
 (define-condition manual-unbuildable ()
   ((implementation :accessor unbuildable-implementation :initarg :implementation)))
