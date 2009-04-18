@@ -68,7 +68,7 @@
   (with-sbcl-build-setup (implementation dir)
     (invoke-logged-program "build-sbcl" (merge-pathnames #p"scripts/run-in-32bit" *base-dir*)
                            `("./make.sh" ,@*sbcl32-build-args*)
-                           :environment `("CC=gcc-2.95"
+                           :environment `("CC=gcc-3.3"
                                           ,@(sb-ext:posix-environ)))
     implementation))
 
