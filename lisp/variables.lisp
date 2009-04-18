@@ -1,5 +1,8 @@
 (in-package :autobench)
 
+(defconstant +benchmark-version+ 2
+  "Version of CL-bench timing.")
+
 (defmacro machine-case (&rest cases)
   "Selects forms based on the value returned by (MACHINE-INSTANCE).
 Usage is analogous to that of CASE, except for the lack of an otherwise clause."
@@ -93,7 +96,9 @@ this should be >=3.")
   (setf *www-base* (merge-pathnames #p"www/" *base-dir*))
   (setf *base-result-dir* (merge-pathnames (make-pathname :directory `(:relative "+to-import" ,(machine-instance)))
                                                    *cl-bench-base*))
-  (setf *archived-result-dir* (merge-pathnames (make-pathname :directory `(:relative "+to-import" "old" ,(machine-instance)))
+  (setf *archived-result-dir* (merge-pathnames (make-pathname
+                                                :directory `(:relative "+to-import" "old"
+                                                                       ,(machine-instance) ,(princ-to-string +benchmark-version+)))
                                                        *cl-bench-base*))
   (setf *version-translations-file* (merge-pathnames #p"version-translations.lisp-expr" *base-dir*)))
 

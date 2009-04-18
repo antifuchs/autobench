@@ -153,6 +153,7 @@
      (mapcar (lambda (bm)
                `(:benchmark ,bm :id ,(gensym)))
              (query (:order-by
-                     (:select 'benchmark-name :from 'benchmarks)
+                     (:select 'benchmark-name :from 'benchmarks
+                              :where (:= 'benchmark-version +benchmark-version+))
                      'benchmark-name)
                     :column)))))
