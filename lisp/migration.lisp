@@ -91,7 +91,7 @@
   (let* ((start (query (:select (:+ 1 (:max 'version_id)) :from 'versions)
                        :single!))
          (query (format nil
-                        "create sequence versions_version_id_seq owned by versions.version_id no maxvalue start ~A" start)))
+                        "create sequence versions_version_id_seq no maxvalue start ~A" start)))
     (run-query (:raw query)))
   (run-query "alter table versions alter version_id set default nextval('versions_version_id_seq')")
   
