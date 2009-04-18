@@ -266,6 +266,7 @@ AB.plot = (function(){
       });
       $.plot(elt, data, 
              { xaxis: { mode: "time" },
+               yaxis: { min: 0},
                 grid: { hoverable: true, clickable: true }})
       $('#dialog').remove();      
     },
