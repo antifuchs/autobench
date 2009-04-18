@@ -208,7 +208,7 @@ AB.plot = (function(){
                   host: machine};
       if (release)
         data.release = release;
-      $.getJSON('/bench/json/data', data,
+      $.getJSON('/boinkmarks/json/data', data,
                 function(retrieved_data, status) {
                   var result_data = [{}, {}];
                   if (status == 'success') {

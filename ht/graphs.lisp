@@ -2,7 +2,7 @@
 
 ;;; handlers for actions:
 
-(define-easy-handler (index :uri "/bench/index") ()
+(define-easy-handler (index :uri "/boinkmarks/index") ()
   (with-db-connection ()
     (render-template
      :implementations
@@ -27,7 +27,7 @@
                      'benchmark-name)
                     :column)))))
 
-(define-easy-handler (json-for-one-bm :uri "/bench/json/data")
+(define-easy-handler (json-for-one-bm :uri "/boinkmarks/json/data")
     (implementation mode host release)
   (setf (hunchentoot:content-type*) "text/javascript")
   (implementation-run-times implementation mode host release))
