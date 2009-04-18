@@ -40,7 +40,7 @@
 
 (defmigration 0-use-surrogate-keys
   "Use surrogate keys for builds: should speed up accesses to results."
-  (run-query "cluster version using version_release_date_idx")
+  (run-query "cluster version_release_date_idx on version")
   (run-query "alter table version add version_id serial")
 
   ;; recreate tables with good names:
