@@ -318,6 +318,7 @@ AB.userPrefs = (function(){
     removeFromDisplay: function(elt, delayRedisplay) {
       var name = $(elt).attr('id');
       $(elt).addClass('hidden');
+      $(elt).removeClass('shown');
       if (!delayRedisplay)
         AB.userPrefs.regenerateHiddenList();
     },
@@ -332,6 +333,7 @@ AB.userPrefs = (function(){
     },
     
     showAgain: function(elt) {
+      $(elt).addClass('shown');
       $(elt).removeClass('hidden');
       $('ul#hidden-benchmarks li a[class='+$(elt).attr('id')+']').parent().remove();
       AB.plot.drawOne($(elt).attr('id'));
