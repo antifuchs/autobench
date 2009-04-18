@@ -8,3 +8,4 @@ defflow off
 zombie q
 
 screen /opt/lisp/autobench/production/autobench --load /opt/lisp/autobench/production/init.lisp
+screen /usr/bin/emacs -q -l /opt/lisp/autobench/production/init.el
