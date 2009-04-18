@@ -73,6 +73,13 @@ modify DIRECTORY and return it.
 To indicate that there is no next implementation available,
 return NIL."))
 
+(defgeneric implementation-version-code (implementation directory)
+  (:documentation "A version control system code (e.g. git's SHA1) that can be
+used to identify a given version. ")
+  (:method (impl directory)
+    (declare (ignore impl))
+    nil))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Architecture Protocol Some implementations need help when
 ;;; running/building on different architectures. The methods on this
@@ -152,31 +159,33 @@ After control leaves BODY, chdirs back to the old value of *d-p-d*."
 	     (format stream "Program invocation ~S ~S exited abnormally with code: ~A"
 		     (failed-program c) (failed-args c) (failed-code c)))))
 
-#+sbcl(defun invoke-logged-program (step-name program args &key (environment (sb-ext:posix-environ)))
-  (multiple-value-bind (second minute hour date month year day daylight-p zone) (get-decoded-time)
-      (declare (ignore day daylight-p zone))
-      (let ((output-pathname (merge-pathnames
-			      (make-pathname
-			       :name (format nil "~4,1,0,'0@A-~2,1,0,'0@A-~2,1,0,'0@AT~2,1,0,'0@A:~2,1,0,'0@A:~2,1,0,'0@A_~A"
-					     year month date hour minute second step-name))
-			      *log-directory*)))
-	(ensure-directories-exist output-pathname)
-	(let ((proc #+sbcl(sb-ext:run-program program args
-                                              :input nil
-                                              :environment environment
-                                              :output output-pathname
-                                              :if-output-exists :supersede)
-                    #-sbcl(error "Running programs is not implemented!")))
-	  (sb-ext:process-wait proc)
-	  (cond
-            ((not (zerop (sb-ext:process-exit-code proc)))
-              (error 'program-exited-abnormally
-                     :program program
-                     :args args
-                     :code (sb-ext:process-exit-code proc)))
-            (t
-             (delete-file output-pathname)
-             (sb-ext:process-exit-code proc)))))))
+#+sbcl
+(defun invoke-logged-program (step-name program args &key (environment (sb-ext:posix-environ)))
+  (multiple-value-bind (second minute hour date month year day daylight-p zone)
+      (get-decoded-time)
+    (declare (ignore day daylight-p zone))
+    (let ((output-pathname
+           (merge-pathnames
+            (make-pathname
+             :name (format nil "~4,1,0,'0@A-~2,1,0,'0@A-~2,1,0,'0@AT~2,1,0,'0@A:~2,1,0,'0@A:~2,1,0,'0@A_~A"
+                           year month date hour minute second step-name))
+            *log-directory*)))
+      (ensure-directories-exist output-pathname)
+      (let ((proc (sb-ext:run-program program args
+                                      :input nil
+                                      :environment environment
+                                      :output output-pathname
+                                      :if-output-exists :supersede)))
+        (sb-ext:process-wait proc)
+        (cond
+          ((not (zerop (sb-ext:process-exit-code proc)))
+           (error 'program-exited-abnormally
+                  :program program
+                  :args args
+                  :code (sb-ext:process-exit-code proc)))
+          (t
+           (delete-file output-pathname)
+           (sb-ext:process-exit-code proc)))))))
 
 #-sbcl
 (defun invoke-logged-program (step-name program args &key environment)
