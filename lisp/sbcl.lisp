@@ -59,9 +59,10 @@
         (declare (ignorable ,arch))
         (with-customize-target-features ,features
           (handler-case (progn ,@body)
-            (program-exited-abnormally ()
+            (program-exited-abnormally (c)
               (error 'implementation-unbuildable
-                     :implementation implementation))))))))
+                     :implementation implementation
+                     :condition c))))))))
 
 #+sbcl
 (defmethod build-in-directory/arch ((implementation sbcl) dir (arch (eql :emulated-x86)))
