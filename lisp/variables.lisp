@@ -30,6 +30,8 @@ and customize the variables documented in e-s-t-c's docstring.")
 
 (defparameter *db-default-database-name* "autobench")
 
+(defparameter *db-default-password* nil)
+
 (defparameter *db-default-user-name* (machine-case
                                       ("baker" "autobench")
                                       ("jubjub.local" "asf")))

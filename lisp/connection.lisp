@@ -51,5 +51,5 @@ the DB maintainer, installed the public key in the right place, and have customi
 (defmacro with-db-connection (()  &body body)
   `(postmodern:with-connection
        (list *db-default-database-name* *db-default-user-name*
-             nil "localhost")
+             *db-default-password* "localhost")
      ,@body))
