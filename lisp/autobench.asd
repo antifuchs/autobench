@@ -26,7 +26,7 @@
                (:file "autobuilder"
                       :depends-on ("implementation" "util" "file-locking"))
                (:file "pg-import" :depends-on ("variables" "sbcl" "clisp"))
-               (:file "migrations" :depends-on ("pg-import"))))
+               (:file "migration" :depends-on ("pg-import"))))
 
 (defmethod perform :after ((op load-op) (c (eql (find-system :autobench))))
   (let ((init-file (symbol-value (intern "*USER-LOCAL-INIT-FILE*" :autobench))))
