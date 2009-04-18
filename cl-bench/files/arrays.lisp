@@ -1,7 +1,7 @@
 ;; benchmarks speed of array and sequence operations
 ;;
 ;; Author: Eric Marsden <emarsden@laas.fr>
-;; Time-stamp: <2009-04-16 13:46:50 asf>
+;; Time-stamp: <2009-04-17 11:32:49 asf>
 ;;
 ;;
 ;; Timing tests for creation, initialization, access and garbage
@@ -23,6 +23,11 @@
            (&optional (,size-arg ,size-default))
          (setf ,size-var ,size-arg
                ,@(mapcan #'identity bindings))
+         (values))
+       (defun ,(intern (format nil "~A-TEARDOWN" name)) ()
+         (setf ,size-var nil
+               ,@(mapcan (lambda (binding)
+                           (list (first binding) nil)) bindings))
          (values))
        (defun ,name ()
          ,@body))))
