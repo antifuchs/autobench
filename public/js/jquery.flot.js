@@ -1,1 +1,0 @@
-../../vendor/flot/jquery.flot.js

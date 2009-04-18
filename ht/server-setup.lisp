@@ -26,9 +26,9 @@
       (list 'dispatch-easy-handlers
             ;; for running in development setup:
             (create-folder-dispatcher-and-handler
-             "/css/" (merge-pathnames #p"public/css/" *base-dir*))
+             "/css/" (merge-pathnames #p"ht/public/css/" *base-dir*))
             (create-folder-dispatcher-and-handler
-             "/js/" (merge-pathnames #p"public/js/" *base-dir*))))
+             "/js/" (merge-pathnames #p"ht/public/js/" *base-dir*))))
 
 ;;; Template default paths:
 
@@ -39,7 +39,7 @@
                                    (1- (search (query-string *request*) uri)))
                            uri)))
     (merge-pathnames
-     (merge-pathnames (pathname (concatenate 'string "views" handler-path))
+     (merge-pathnames (pathname (concatenate 'string "ht/views" handler-path))
                       (make-pathname :type "html"))
      *base-dir*)))
 
