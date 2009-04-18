@@ -24,7 +24,7 @@ h1, h2, h3, h4 {
     padding-top: 2px;
     padding-bottom: 2px;
     background-color: #fee;
-    opacity: 0.80;
+    opacity: 0.90;
 }
 
 #clicktip h4 {
@@ -63,10 +63,18 @@ a {
 
 div#sidebar {
   background-color: #ffffff;
-  position: fixed;
-  top: 0;
+  top: 0px;
   right: 0px;
-  bottom: 0;
+  left: 300px;
+  bottom: 0px;
+}
+
+#sidebar-container {
+  width: 300px;
+  position: fixed;
+  top: 0px;
+  right: 0px;
+  bottom: 0px;
 }
 
 div#sidebar div.box {
@@ -77,11 +85,15 @@ div#sidebar div.box {
   -webkit-border-top-left-radius: 0.5em 0.5em;
   margin: 0.01em;
   background-color: #E8E8E8;
-  width: 100%;
   margin-right: 8px;
 }
 
-div#sidebar div.box h3 {
+div#sidebar h3 {
+  margin: 0px;
+  height: 25px;
+}
+
+div#sidebar div.box div.box-head {
   margin-top: 5px;
   padding-left: 13px;
 }
@@ -94,16 +106,23 @@ form#impl-selector-form p {
 }
 
 div#hidden-benchmarks-box {
-  position: absolute;
-  height: 60%;
+  height: 200px;
   padding-left: 0px;
-  bottom: 0;
+}
+
+div#hidden-benchmarks-box div.box-body {
   overflow-y: auto;
 }
 
 ul#hidden-benchmarks {
+  height: 175px;
+  margin: 0px;
   padding-left: 20px;
-  overflow-y: auto;
+}
+
+#hidden-benchmarks a {
+  font-family: 'Trebuchet MS',Verdana,sans-serif;
+  font-size: small;
 }
 
 ul#hidden-benchmarks li {

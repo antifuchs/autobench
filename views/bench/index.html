@@ -19,34 +19,38 @@
 <body>
   <h1>Boinkmarks: Automated CL benchmarks</h1>
   <div id="sidebar">
-    <div class="box" id="impl-selector">
-      <h3>Implementations</h3>
-      <form id="impl-selector-form">
-      <!-- tmpl_loop implementations -->
-        <p>
-          <input class="impl" type="checkbox" id="<!-- tmpl_var implspec -->"
-                 name="<!-- tmpl_var implspec -->"
-                 autocomplete="off"
-                 <!-- tmpl_if selected -->
-                   checked="checked"
-                 <!-- /tmpl_if -->>
-          <label for="<!-- tmpl_var implspec -->"
-          ><!-- tmpl_var pretty-name --></label>
-       </p>
-      <!-- /tmpl_loop -->
-      </form>
-      <script type="text/javascript">
-        $("input.impl").change(AB.plot.selectionChanged);
-      </script>
-    </div>
-    <div id="zoom-box" class="box">
-      <h3>Showing release <span id="zoom-release-spec"></span></h3>
-      <button id="zoom-out" onclick="AB.plot.zoomOut();return false;">Zoom out</button>
-    </div>
-    <div id="hidden-benchmarks-box" class="box">
-      <h3>Hidden benchmarks</h3>
-      <ul id="hidden-benchmarks">
-      </ul>
+    <div id="sidebar-container">
+      <div class="box" id="impl-selector">
+        <div class="box-head"><h3>Implementations</h3></div>
+        <div class="box-body">
+          <form id="impl-selector-form">
+          <!-- tmpl_loop implementations -->
+            <p>
+              <input class="impl" type="checkbox" id="<!-- tmpl_var implspec -->"
+                     name="<!-- tmpl_var implspec -->"
+                     autocomplete="off"
+                     <!-- tmpl_if selected -->
+                       checked="checked"
+                     <!-- /tmpl_if -->>
+              <label for="<!-- tmpl_var implspec -->"
+              ><!-- tmpl_var pretty-name --></label>
+           </p>
+          <!-- /tmpl_loop -->
+          </form>
+          <script type="text/javascript" defer="defer">
+            $("input.impl").change(AB.plot.selectionChanged);
+          </script>
+        </div>
+      </div>
+      <div id="zoom-box" class="box">
+        <div class="box-head"><h3>Showing release <span id="zoom-release-spec"></span></h3></div>
+        <div class="box-body"><button id="zoom-out" onclick="AB.plot.zoomOut();return false;">Zoom out</button></div>
+      </div>
+      <div id="hidden-benchmarks-box" class="box">
+        <div class="box-head"><h3>Hidden benchmarks</h3></div>
+        <div class="box-body"><ul id="hidden-benchmarks"></div>
+        </ul>
+      </div>
     </div>
   </div>
   <div id="graphs">
