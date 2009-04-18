@@ -105,7 +105,8 @@ this should be >=3.")
 ;;; local init file
 (defvar *user-local-init-file* (merge-pathnames #p".autobench.lisp" (user-homedir-pathname)))
 
-(defun load-init-file ()
+(defun load-init-file (&optional
+                       (*user-local-init-file* *user-local-init-file*))
   (when (probe-file *user-local-init-file*)
     (let ((*package* (find-package "AUTOBENCH")))
       (load *user-local-init-file*)))

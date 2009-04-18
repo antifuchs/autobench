@@ -11,14 +11,15 @@
 
 (defvar *running-acceptor* nil)
 
-(defun run-server (&key (debug-p t))
+(defun run-server (&key (port 4242) (debug-p t))
   (hunchentoot:start
    (or *running-acceptor*
        (setf *running-acceptor*
              (make-instance (if debug-p
                                 'debuggable-acceptor
                                 'acceptor)
-                :port 4242)))))
+                :port port
+                :address "127.0.0.1")))))
 
 ;;; simple local handlers for the development system:
 
