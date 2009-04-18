@@ -1,6 +1,6 @@
 ;;; all the performance benchmarks
 ;;;
-;;; Time-stamp: <2009-04-16 16:13:48 asf>
+;;; Time-stamp: <2009-04-17 11:37:45 asf>
 
 
 (in-package :cl-bench)
@@ -284,6 +284,7 @@
     :long "Adding together two vectors"
     :function 'cl-bench.arrays:bench-1d-arrays
     :setup 'cl-bench.arrays:bench-1d-arrays-setup
+    :teardown 'cl-bench.arrays:bench-1d-arrays-teardown
     :runs (* 100 10)
     :disabled-for '(lispworks-personal-edition))
 
@@ -291,6 +292,7 @@
     :long "Adding together two 2-dimensional arrays"
     :function 'cl-bench.arrays:bench-2d-arrays
     :setup 'cl-bench.arrays:bench-2d-arrays-setup
+    :teardown 'cl-bench.arrays:bench-2d-arrays-teardown
     :runs (* 4 10)
     :disabled-for '(lispworks-personal-edition))
 
@@ -298,6 +300,7 @@
     :long "Adding together two 3-dimensional arrays"
     :function 'cl-bench.arrays:bench-3d-arrays
     :setup 'cl-bench.arrays:bench-3d-arrays-setup
+    :teardown 'cl-bench.arrays:bench-3d-arrays-teardown
     :runs (* 1 10)
     :disabled-for '(lispworks-personal-edition))
 
@@ -306,6 +309,7 @@
     :long "BIT-XOR, BIT-AND on big bitvectors"
     :function 'cl-bench.arrays:bench-bitvectors
     :setup 'cl-bench.arrays:bench-bitvectors-setup
+    :setup 'cl-bench.arrays:bench-bitvectors-teardown
     :runs (* 11 700)
     :disabled-form '(lispworks-personal-edition poplog))
 
@@ -313,13 +317,15 @@
     :long "Allocate and fill large strings"
     :function 'cl-bench.arrays:bench-strings
     :setup 'cl-bench.arrays:bench-strings-setup
+    :teardown 'cl-bench.arrays:bench-strings-teardown
     :runs (* 2 50)
     :disabled-for '(lispworks-personal-edition))
 
 (defbench fill-strings/adjust
     :short "fill-strings/adjustable"
     :long "Fill an adjustable array with characters"
-    :setup 'cl-bench.arrays:bench-strings/adjustable
+    :setup 'cl-bench.arrays:bench-strings/adjustable-setup
+    :teardown 'cl-bench.arrays:bench-strings/adjustable-teardown
     :function 'cl-bench.arrays:bench-strings/adjustable
     :runs (* 2 10)
     :disabled-for '(lispworks-personal-edition))
@@ -331,6 +337,7 @@
     :long "WITH-OUTPUT-TO-STRING and much output"
     :function 'cl-bench.arrays:bench-string-concat
     :setup 'cl-bench.arrays:bench-string-concat-setup
+    :teardown 'cl-bench.arrays:bench-string-concat-teardown
     :runs (* 5 20)
     :disabled-for '(clisp allegro lispworks-personal-edition poplog))
 
@@ -338,6 +345,7 @@
     :long "FIND, FIND-IF, POSITION on a simple-vector"
     :function 'cl-bench.arrays:bench-search-sequence
     :setup 'cl-bench.arrays:bench-search-sequence-setup
+    :teardown 'cl-bench.arrays:bench-search-sequence-teardown
     :runs (* 4 10)
     :disabled-for '(lispworks-personal-edition))
 
