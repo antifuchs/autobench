@@ -80,6 +80,8 @@
                          :where (:and (:= 'implementation-name
                                           implementation-name)
                                       (:= 'machine-name host)
+                                      (:= 'benchmark-version
+                                          +benchmark-version+)
                                       (:= 'mode mode)
                                       (:raw
                                        (release-condition
@@ -92,14 +94,15 @@
         (push (list (ut-to-flot-timestamp release-date) seconds error)
               (gethash benchmark result-times ())))
       (doquery (:select 'release-date 'version-number 'version-code
-                        (:as (:exists (:select 'version-id :from (:as 'versions 'subversions)
-                                               :where (:and (:= 'subversions.implementation-name
-                                                                implementation-name)
-                                                            (:= 'subversions.belongs-to-release
-                                                                'versions.version-number)
-                                                            (:not
-                                                             (:= 'subversions.belongs-to-release
-                                                                 'subversions.version-number)))))
+                        (:as (:exists
+                              (:select 'version-id :from (:as 'versions 'subversions)
+                                       :where (:and (:= 'subversions.implementation-name
+                                                        implementation-name)
+                                                    (:= 'subversions.belongs-to-release
+                                                        'versions.version-number)
+                                                    (:not
+                                                     (:= 'subversions.belongs-to-release
+                                                         'subversions.version-number)))))
                              'zoomp)
                         :from 'versions
                         :where (:and (:= 'implementation-name
