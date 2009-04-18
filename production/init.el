@@ -18,7 +18,8 @@
 
 (push "/opt/lisp/clbuild/source/slime" load-path)
 (require 'slime)
-(slime-setup '(slime-autodoc slime-fancy-inspector slime-editing-commands))
+(slime-setup '(slime-fancy slime-autodoc slime-fancy-inspector
+               slime-editing-commands))
 (setq slime-port 7717)
 
 (add-hook 'lisp-mode-hook
