@@ -1,7 +1,7 @@
 setenv PATH "/opt/lisp/autobench/script:${PATH}"
 setenv LC_CTYPE en_US.UTF-8
 
-escape ^@
+escape ^\\
 autodetach on
 defutf8 on
 defflow off
