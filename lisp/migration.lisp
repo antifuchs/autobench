@@ -44,7 +44,7 @@
   (run-query "alter table version add version_id serial")
 
   ;; recreate tables with good names:
-  (run-query "create table benchmarks as select name as benchmark_name, unit as unit from benchmark")
+  (run-query "create table benchmarks as select name as benchmark_name, 1 as benchmark_version, unit as unit from benchmark")
   (run-query "create table machines as select name as machine_name, type as machine_type from machine")
   (run-query "create table versions as 
                select version_id, i_name as implementation_name, version as version_number, is_release, 
@@ -54,7 +54,7 @@
                select version_id, mode
                  from build join version on v_name=i_name and v_version=version")
   (run-query "create table results as 
-               select version_id, mode, m_name as machine_name, b_name as benchmark_name, 
+               select version_id, mode, m_name as machine_name, b_name as benchmark_name, 1 as benchmark_version,
                       from_universal_time(date) as result_date, seconds
                  from result join version on v_name=i_name and v_version=version")
   (run-query "create table implementations as 
@@ -68,9 +68,9 @@
   (run-query "alter table versions add primary key (version_id)")
   (run-query "create index release_subversions_idx on versions(implementation_name, belongs_to_release)")
   (run-query "create unique index version_uniqueness_idx on versions(implementation_name, version_number)")
-  (run-query "alter table results add primary key (version_id, mode, result_date, benchmark_name)")
+  (run-query "alter table results add primary key (version_id, mode, result_date, benchmark_name, benchmark_version)")
   (run-query "alter table implementations add primary key (implementation_name, mode, machine_name)")
-  (run-query "alter table benchmarks add primary key (benchmark_name)")
+  (run-query "alter table benchmarks add primary key (benchmark_name, benchmark_version)")
   (run-query "alter table machines add primary key (machine_name)")
 
   ;; FK constraints, and we're done:
@@ -81,8 +81,8 @@
                     references versions(version_id) on delete cascade deferrable initially deferred")
   (run-query "alter table results add constraint results_builds_fk foreign key (version_id, mode)
                     references builds(version_id, mode) on delete cascade deferrable initially deferred")
-  (run-query "alter table results add constraint results_benchmarks_fk foreign key (benchmark_name)
-                    references benchmarks(benchmark_name) deferrable initially deferred")
+  (run-query "alter table results add constraint results_benchmarks_fk foreign key (benchmark_name, benchmark_version)
+                    references benchmarks(benchmark_name, benchmark_version) deferrable initially deferred")
   (run-query "alter table results add constraint results_machines_fk foreign key (machine_name)
                     references machines(machine_name) deferrable initially deferred")
   (run-query "alter table results alter seconds set not null, alter machine_name set not null")

@@ -95,4 +95,3 @@
   (loop for implementation in implementations
         do (apply #'build-and-benchmark-1 (assoc implementation *implementations-to-build* :test #'eql))))
 
-;;; arch-tag: 1c76f71a-6a6c-4423-839f-46154ea259c2
