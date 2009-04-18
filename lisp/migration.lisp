@@ -86,6 +86,14 @@
   (run-query "alter table results add constraint results_machines_fk foreign key (machine_name)
                     references machines(machine_name) deferrable initially deferred")
   (run-query "alter table results alter seconds set not null, alter machine_name set not null")
+
+  ;; version_id sequence
+  (let* ((start (query (:select (:+ 1 (:max 'version_id)) :from 'versions)
+                       :single!))
+         (query (format nil
+                        "create sequence versions_version_id_seq owned by versions.version_id no maxvalue start ~A" start)))
+    (run-query (:raw query)))
+  (run-query "alter table versions alter version_id set default nextval('versions_version_id_seq')")
   
   
   ;; Now drop the irrelevant tables 
