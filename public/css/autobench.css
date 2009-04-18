@@ -141,16 +141,21 @@ div.graph-canvas-container {
 }
 
 div.graph-title {
+  width: 660px;
 }
 
 div.graph-title h3 {
   margin-top: 19px;
   margin-bottom: 0px;
+  width: 660px;
 }
 
 div.graph-buttons div {
   margin-top: -19px;
   margin-right: 6px;
+  width: 20px;
+  height: 20px;
+  text-align: center;
   float: right;
 }
 
