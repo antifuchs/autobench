@@ -294,7 +294,7 @@ AB.userPrefs = (function(){
           input.checked = AB.userPrefs.implementationActive(input.name);
         });
       } else {
-        $.cookies.set('haveDefaults', 'yes', {hoursToLive: 8544});
+        $.cookies.set('haveDefaults', 'yes');
         if (!$.cookies.test())
           alert("You have cookie paranoia settings that will negatively affect your user experience on this site.\nProceed with caution.");
         $('input.impl').each(function(i, input){
@@ -345,8 +345,8 @@ AB.userPrefs = (function(){
       $.each($('div.graph'), function(i, elt){
         cookieValue += ($(elt).hasClass('hidden') ? '0' : '1');
       });
-      $.cookies.del('hide', {hoursToLive: 8544})
-      $.cookies.set('hide', cookieValue, {hoursToLive: 8544});
+      $.cookies.del('hide')
+      $.cookies.set('hide', cookieValue);
     },
     
     hideBenchmark: function(elt) {
@@ -378,7 +378,7 @@ AB.userPrefs = (function(){
     
     setImplementationActive: function(spec, value){      
       if (value) {
-        $.cookies.set('impl_'+spec, 'active', {hoursToLive: 8544});
+        $.cookies.set('impl_'+spec, 'active');
       } else {
         $.cookies.del('impl_'+spec);
       }
