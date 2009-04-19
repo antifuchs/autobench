@@ -1,11 +1,11 @@
-setenv PATH "/opt/lisp/autobench/script:${PATH}"
-setenv LC_CTYPE en_US.UTF-8
+source ~/.screnrc.common
 
-escape ^\\
 autodetach on
-defutf8 on
-defflow off
 zombie q
 
-screen /opt/lisp/clbuild/clbuild lisp --load /opt/lisp/autobench/production/init.lisp
-screen /usr/bin/emacs -q -l /opt/lisp/autobench/production/init.el
+screen -t lisp 10 /opt/lisp/clbuild/clbuild lisp --load /opt/lisp/autobench/production/init.lisp
+screen -t term1 12 zsh
+screen -t term2 13 zsh
+
+# default screen
+screen -t slime 11 /usr/bin/emacs -q -l /opt/lisp/autobench/production/init.el
