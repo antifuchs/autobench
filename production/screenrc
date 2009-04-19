@@ -1,4 +1,4 @@
-source ~/.screnrc.common
+source ~/.screenrc.common
 
 autodetach on
 zombie q
