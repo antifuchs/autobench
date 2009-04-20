@@ -138,38 +138,42 @@
                                (machine-name (machine-instance)))
   (with-db-connection ()
     (dolist (file (directory (merge-pathnames #p"CL-benchmark*.*" dir)))
-      (multiple-value-bind (i-name version mode benchmark)
-          (read-benchmark-data file)
-        (let ((mtime (simple-date:universal-time-to-timestamp (file-write-date file)))
-              (version-id (query (:select 'version-id :from 'versions :where
-                                          (:and (:= 'implementation-name i-name)
-                                                (:= 'version-number version)))
-                                 :single!)))
-          ;; First, make sure the benchmarks exist: Since we're in a txn,
-          ;; we make one savepoint per benchmark and roll back if a benchmark
-          ;; already exists.
-          (with-transaction (insert-results)
-            (dolist (b benchmark)
-              (destructuring-bind (b-name r-secs u-secs &rest ignore) b
-                (declare (ignore r-secs ignore u-secs))
-                (ignore-errors
-                  (with-savepoint one-bm
-                    (query (:insert-into 'benchmarks :set
-                                         'benchmark-name b-name
-                                         'benchmark-version +benchmark-version+))))))
-            ;; Now insert the actual benchmark data
-            (dolist (b benchmark)
-              (destructuring-bind (b-name r-secs u-secs &rest ignore) b
-                (declare (ignore r-secs ignore))
-                (query
-                 (:insert-into 'results :set
-                               'result-date mtime
-                               'version-id version-id
-                               'mode mode
-                               'benchmark-name b-name
-                               'benchmark-version +benchmark-version+
-                               'machine-name machine-name
-                               'seconds u-secs)))))))
+      (catch 'next-benchmark
+        (multiple-value-bind (i-name version mode benchmark)
+            (read-benchmark-data file)
+          (unless version
+            ;; No results
+            (throw 'next-benchmark nil))
+          (let ((mtime (simple-date:universal-time-to-timestamp (file-write-date file)))
+                (version-id (query (:select 'version-id :from 'versions :where
+                                            (:and (:= 'implementation-name i-name)
+                                                  (:= 'version-number version)))
+                                   :single!)))
+            ;; First, make sure the benchmarks exist: Since we're in a txn,
+            ;; we make one savepoint per benchmark and roll back if a benchmark
+            ;; already exists.
+            (with-transaction (insert-results)
+              (dolist (b benchmark)
+                (destructuring-bind (b-name r-secs u-secs &rest ignore) b
+                  (declare (ignore r-secs ignore u-secs))
+                  (ignore-errors
+                    (with-savepoint one-bm
+                      (query (:insert-into 'benchmarks :set
+                                           'benchmark-name b-name
+                                           'benchmark-version +benchmark-version+))))))
+              ;; Now insert the actual benchmark data
+              (dolist (b benchmark)
+                (destructuring-bind (b-name r-secs u-secs &rest ignore) b
+                  (declare (ignore r-secs ignore))
+                  (query
+                   (:insert-into 'results :set
+                                 'result-date mtime
+                                 'version-id version-id
+                                 'mode mode
+                                 'benchmark-name b-name
+                                 'benchmark-version +benchmark-version+
+                                 'machine-name machine-name
+                                 'seconds u-secs))))))))
       (rename-file file (ensure-directories-exist
                          (merge-pathnames
                           (make-pathname :name (pathname-name file))
