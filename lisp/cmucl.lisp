@@ -21,7 +21,7 @@
 (defun prepare-cmucl-cmdline (impl shell-quote-p)
   `(,(shellquote (namestring (implementation-cached-file-name impl "lisp"))
                  shell-quote-p)
-     "-batch" "-core" ,(shellquote (namestring (implementation-cached-file-name impl "lisp.core"))
+    "-noinit" "-batch" "-core" ,(shellquote (namestring (implementation-cached-file-name impl "lisp.core"))
                                    shell-quote-p)
      "--boink-core-file" ,(shellquote (namestring (implementation-cached-file-name impl "lisp.core"))
                                       shell-quote-p)
