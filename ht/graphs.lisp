@@ -30,6 +30,19 @@
 (define-easy-handler (json-for-one-bm :uri "/boinkmarks/json/data")
     (implementation mode host release)
   (setf (hunchentoot:content-type*) "text/javascript")
+  (with-db-connection ()
+    (let ((last-result
+           (query (:select
+                   (:max 'result-date)
+                   :from 'versions :natural :inner-join 'results
+                   :where (:raw (result-condition
+                                 implementation mode host release)))
+                  :single)))
+      (when last-result
+        (handle-if-modified-since last-result))
+      (setf (header-out :last-modified) (rfc-1123-date last-result)
+            (header-out :expires) (rfc-1123-date (+ (* 20 60)
+                                                    (get-universal-time))))))
   (implementation-run-times implementation mode host release))
 
 ;;; functions used by these handlers:
@@ -45,16 +58,8 @@
                          (:as (:/ (:stddev 'seconds) (:count 'seconds))
                               'error)
                          :from 'results :natural :inner-join 'versions
-                         :where (:and (:= 'implementation-name
-                                          implementation-name)
-                                      (:= 'machine-name host)
-                                      (:= 'benchmark-version
-                                          +benchmark-version+)
-                                      (:= 'mode mode)
-                                      (:raw
-                                       (release-condition
-                                        implementation-name
-                                        only-release)))
+                         :where (:raw (result-condition implementation-name
+                                                        mode host only-release))
                          :group-by 'benchmark-name 'release-date
                          'version-number 'version-code)
                 (:desc 'release-date))
@@ -83,6 +88,16 @@
       (st-json:write-json-to-string
        (st-json:jso "timings" result-times
                     "versions" result-versions)))))
+
+(defun result-condition (implementation-name mode host only-release)
+  (sql (:and (:= 'implementation-name
+                 implementation-name)
+             (:= 'machine-name host)
+             (:= 'benchmark-version
+                 +benchmark-version+)
+             (:= 'mode mode)
+             (:raw
+              (release-condition implementation-name only-release)))))
 
 (defun release-condition (implementation-name only-release)
   (if (null only-release)
