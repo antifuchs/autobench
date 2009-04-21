@@ -29,7 +29,8 @@
             (create-folder-dispatcher-and-handler
              "/css/" (merge-pathnames #p"ht/public/css/" *base-dir*))
             (create-folder-dispatcher-and-handler
-             "/js/" (merge-pathnames #p"ht/public/js/" *base-dir*))))
+             "/javascript/"
+             (merge-pathnames #p"ht/public/javascript/" *base-dir*))))
 
 ;;; Template default paths:
 
