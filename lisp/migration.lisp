@@ -131,3 +131,7 @@
                              :where (:and
                                      (:= 'version-number version)
                                      (:is-null 'version-code))))))))))
+
+(defmigration 0000002-universal-time-ify-result-date
+  "Make result_date a universal_time field"
+  (run-query "alter table results alter result_date type bigint using to_universal_time(result_date)"))
