@@ -144,7 +144,7 @@
           (unless version
             ;; No results
             (throw 'next-benchmark nil))
-          (let ((mtime (simple-date:universal-time-to-timestamp (file-write-date file)))
+          (let ((mtime (file-write-date file))
                 (version-id (query (:select 'version-id :from 'versions :where
                                             (:and (:= 'implementation-name i-name)
                                                   (:= 'version-number version)))
