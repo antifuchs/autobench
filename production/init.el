@@ -43,6 +43,7 @@
 (define-key slime-repl-mode-map [(return)] 'asf-slime-repl-return)
 
 
+(setq slime-lisp-host "10.0.9.1")
 (setq slime-port 7717)
 
 (add-hook 'lisp-mode-hook
