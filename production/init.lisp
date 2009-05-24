@@ -11,5 +11,6 @@
 
 (autobench::load-init-file #p"/opt/lisp/autobench/production/autobench-init.lisp")
 
-(swank:create-server :port *swank-port* :dont-close t)
+(let ((swank::*loopback-interface* "10.0.9.1"))
+  (swank:create-server :port *swank-port* :dont-close t))
 (print (autobench-ht:run-server :port *ht-port* :debug-p nil))
