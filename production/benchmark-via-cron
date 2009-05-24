@@ -1,0 +1,3 @@
+#!/bin/sh
+
+/opt/lisp/clbuild/clbuild lisp --load /opt/lisp/autobench/production/benchmark.lisp | tail -n +8
