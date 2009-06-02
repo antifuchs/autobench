@@ -1,5 +1,68 @@
 if (!AB) var AB = {};
 
+AB.history = (function() {
+  function nonElementPart(str) {
+    return str.split(';')[1];
+  }
+  
+  function elementPart(str) {
+    var elt = str.split(';')[0];
+    if (elt) return elt.substring(1);
+  }
+  
+  function destructureImplReleaseSpec(spec) {
+    var implSpecAndVersion = spec.split('/');
+    if (implSpecAndVersion) {
+      var implSpec = implSpecAndVersion[0].split(',');
+      return [implSpecAndVersion[1], implSpec];
+    }
+  }
+  
+  return {
+    changedTo: function(hash) {
+      var eltPart = elementPart(hash);
+      var elt;
+      if (eltPart) elt = AB.plot.benchmark_element[elementPart(hash)];
+      if (elt) {
+        $.scrollTo(elt.parent().parent());
+      }
+      
+      var zoomConfig = nonElementPart(hash);
+      if (zoomConfig) {
+        if (!AB.plot.initialized) AB.plot.skipInit = true;
+        var releaseSpec = destructureImplReleaseSpec(zoomConfig);
+        AB.plot.zoomIn(releaseSpec[1], releaseSpec[0]);
+      } else if (AB.plot.zoomed) {
+        AB.plot.zoomOut();
+      }
+      
+      return false;
+    },
+    
+    zoomInWithHistory: function(series, version) {
+      var eltPart = elementPart(location.hash);
+      if (!eltPart) eltPart = '';
+      location.hash = eltPart + ';' + AB.plot.version_by_series[series] + '/' + version;
+    },
+    
+    zoomOutWithHistory: function() {
+      var eltPart = elementPart(location.hash);
+      if (!eltPart) eltPart = '';
+      location.hash = eltPart;
+    },
+    
+    jumpToBenchmark: function(benchmarkName) {
+      var versionSpec = nonElementPart(location.hash);
+      location.hash = benchmarkName + ';' + versionSpec;
+    },
+
+    clearCurrentBenchmark: function() {
+      var versionSpec = nonElementPart(location.hash);
+      location.hash = ';' + versionSpec;
+    }
+  };
+})();
+
 AB.mouse = (function() {
   function showTooltip(x, y, id, contents) {
     $('<div id="'+id+'" class="tooltip">' + contents + '</div>').css( {
@@ -87,7 +150,7 @@ AB.mouse = (function() {
           gitlink = '<li><a onclick="window.open(this.href); return false;" href="http://git.boinkor.net/gitweb/sbcl.git?a=commit;h='+sha1+'">commit</a></li>';
         }
         if (!AB.plot.zoomed && canZoom(item.seriesIndex, item.datapoint[0])) {
-          zoomlink = '<li><a title="show minor revisions after this release" href="javascript:AB.plot.zoomIn(\''+item.seriesIndex+'\', \''+getVersion(item.seriesIndex, item.datapoint[0])+'\')">zoom</a></li>';
+          zoomlink = '<li><a title="show minor revisions after this release" href="javascript:AB.history.zoomInWithHistory(\''+item.seriesIndex+'\', \''+getVersion(item.seriesIndex, item.datapoint[0])+'\')">zoom</a></li>';
         }        
         showTooltip(item.pageX, item.pageY, 'clicktip', 
           '<h4><span class="impl">'+getImplName(item.seriesIndex) + '</span><span class="version">' + getVersion(item.seriesIndex, item.datapoint[0]) + "</span></h4>"+
@@ -112,6 +175,10 @@ AB.plot = (function(){
   };
   
   return {
+    skipInit: false,
+    
+    initialized: false,
+    
     zoomed: false,
     
     // [benchmark] -> element containing the graph of that benchmark
@@ -143,23 +210,24 @@ AB.plot = (function(){
     },
     
     init: function() {
-      AB.plot.waitbox('Fetching data...');
-      $("input.impl").each(function(i, elt){
-        if (elt.checked){
-          AB.plot.fetch(destructureImplSpec(elt.id));
-        }
-      });
+      if (!AB.plot.skipInit) {
+        AB.plot.waitbox('Fetching data...');
+        $("input.impl").each(function(i, elt){
+          if (elt.checked){
+            AB.plot.fetch(destructureImplSpec(elt.id));
+          }
+        });
+      }
+      AB.plot.skipInit = false;
+      AB.plot.initialized = true;
     },
     
-    zoomIn: function(series, release) {
+    zoomIn: function(implspec, release) {
       if (AB.plot.zoomed)
         return false;
-        
+      
       AB.mouse.clear();
-      var implspec = AB.plot.version_by_series[series];
-      AB.plot.zoomed = {errors: AB.plot.errors,
-                        versions: AB.plot.versions,
-                        dataset: AB.plot.dataset};
+      AB.plot.zoomed = true;
       AB.plot.errors = {}; AB.plot.versions = {}; AB.plot.dataset = {};
       AB.plot.waitbox('Zooming in on release ' + release + '...');
       $('#zoom-release-spec').text(release);
@@ -173,14 +241,10 @@ AB.plot = (function(){
         return false;
       
       AB.mouse.clear();
-      $.each(AB.plot.zoomed, function(key, val){
-        AB.plot[key] = AB.plot.zoomed[key];
-      });
       $('#impl-selector').show();
       $('body').removeClass('zoomed');
+      AB.plot.init();
       AB.plot.zoomed = false;
-      AB.plot.waitbox('Zooming out...');
-      AB.plot.draw();
     },
     
     selectionChanged: function() {
@@ -337,7 +401,7 @@ AB.userPrefs = (function(){
       $(elt).removeClass('hidden');
       $('ul#hidden-benchmarks li a[class='+$(elt).attr('id')+']').parent().remove();
       AB.plot.drawOne($(elt).attr('id'));
-      window.location.hash = $(elt).attr('id');
+      AB.history.jumpToBenchmark($(elt).attr('id'));
     },
     
     updateHideCookieValue: function(){
@@ -352,6 +416,7 @@ AB.userPrefs = (function(){
     hideBenchmark: function(elt) {
       AB.userPrefs.removeFromDisplay(elt);
       AB.userPrefs.updateHideCookieValue();
+      AB.history.clearCurrentBenchmark();
     },
     
     showBenchmark: function(elt) {
