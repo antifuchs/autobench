@@ -2,6 +2,9 @@
 
 ;;; handlers for actions:
 
+(define-easy-handler (index-redirect :uri "/boinkmarks/") ()
+  (redirect "/boinkmarks/index" :code +http-moved-permanently+))
+
 (define-easy-handler (index :uri "/boinkmarks/index") ()
   (with-db-connection ()
     (render-template
