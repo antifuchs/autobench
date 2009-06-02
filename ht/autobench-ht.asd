@@ -7,4 +7,5 @@
     :depends-on (:autobench :hunchentoot :st-json :html-template)
     :components ((:file "package")
                  (:file "server-setup" :depends-on ("package"))
-                 (:file "graphs" :depends-on ("server-setup"))))
+                 (:file "graphs" :depends-on ("server-setup"))
+                 (:file "feeds" :depends-on ("graphs"))))
