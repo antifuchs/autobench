@@ -90,12 +90,14 @@
     implementation))
 
 (defun prepare-sbcl-environment ()
-  (remove-if (lambda (elt)
-               (member elt '("SBCL_HOME" "LC_CTYPE")
-                       :test #'string-equal))
+  (nconc 
+   (remove-if (lambda (elt)
+                (member elt '("SBCL_HOME" "LC_CTYPE" "LANGUAGE")
+                        :test #'string-equal))
              #+sbcl(sb-ext:posix-environ)
              #-sbcl()
-             :key (lambda (envl) (subseq envl 0 (position #\= envl)))))
+              :key (lambda (envl) (subseq envl 0 (position #\= envl))))
+   (list "LC_CTYPE=C")))
 
 (defun prepare-bench-sbcl-cmdline (impl arch shell-quote-p)
   `(,(format nil "~A" (shellquote (namestring (implementation-cached-file-name impl "sbcl")) shell-quote-p))
