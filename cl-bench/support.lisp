@@ -21,6 +21,7 @@
 
 (defvar *benchmarks* '())
 (defvar *benchmark-results* '())
+#+sbcl(setf sb-impl::*default-external-format* :latin-1)
 
 (defun program-invocation-arguments ()
   "Return the cl-bench startup arguments as a list. 
