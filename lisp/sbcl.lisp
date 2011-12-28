@@ -7,6 +7,12 @@
 (defmethod version-from-directory ((impl sbcl) directory)
   (declare (ignore impl))
   (let ((*read-eval* nil))
+    (unless (probe-file #p"version.lisp-expr")
+      (with-current-directory directory
+        (invoke-logged-program "generate-version" "/bin/bash"
+                               `("-c" ". generate-version.sh ; generate_version")
+                               :environment (append (sb-ext:posix-environ)
+                                                    (list "NO_GIT_HASH_IN_VERSION=true")))))
     (with-open-file (f #p"version.lisp-expr" :direction :input)
       ;; some revisions had a stray ' in version.lisp-expr.  ugh!
       (let ((version (read f)))
